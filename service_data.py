@@ -23,8 +23,8 @@ def area(zip_code, county, year):
 def documents(locator, terms):
     import app
     with app.connect() as db:
-        rows = db.execute('''SELECT l.kind,l.page_url,d.* FROM devoted_document_links l
-            JOIN devoted_documents d ON d.url=l.url WHERE l.locator=? ORDER BY l.kind''',(locator,)).fetchall()
+        rows = db.execute('''SELECT l.kind,l.page_url,l.url,d.text,d.sha256,COALESCE(d.retrieved_at,(SELECT retrieved_at FROM devoted_sync WHERE id=1)) AS retrieved_at FROM devoted_document_links l
+            LEFT JOIN devoted_documents d ON d.url=l.url WHERE l.locator=? ORDER BY l.kind''',(locator,)).fetchall()
     docs = []
     premium = ''
     benefit_excerpt = ''

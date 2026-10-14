@@ -1,10 +1,10 @@
-import {providers} from './provider.js?v=facilities';
+import {providers} from './provider.js?v=15-states';
 import {rankPlans,priorityKeys} from './ranking.js';
 import {workbook} from './excel.js';
 import {medicationPicker} from './medications.js';
-import {providerPicker} from './provider-picker.js?v=facilities';
+import {providerPicker} from './provider-picker.js?v=15-states';
 const form=document.querySelector('#search'); const results=document.querySelector('#results');
-const state=document.querySelector('#state');state.append(new Option('North Carolina','NC'));
+const state=document.querySelector('#state');for(const code of ['NC','SC','GA','FL','AL','TN','VA','KY','LA','TX','OH','PA','DE','MI','NY'])state.append(new Option(code,code));
 const business=form.elements.business;business.replaceChildren(new Option('Medicare Advantage','Medicare Advantage'));
 form.elements.carrier.value='Devoted Health';form.elements.carrier.readOnly=true;
 const county=form.elements.county;
@@ -104,7 +104,7 @@ function exportComparison(ranked,weights) {
   const s=comparisonState;
   const intake=[['Field','Value'],['Candidate name (complete offline)',''],['Additional notes (complete offline)',''],
     ['Export generated',new Date().toISOString()],['Plan data snapshot',s.snapshot],['Plan year','2027'],
-    ['ZIP',s.zip],['County',s.county],['State','NC'],['Carrier','Devoted Health'],['Line of business','Medicare Advantage'],
+    ['ZIP',s.zip],['County',s.county],['State',s.state],['Carrier','Devoted Health'],['Line of business','Medicare Advantage'],
     ['Drug cost assumptions','30-day supply; network retail pharmacy; initial coverage; standard schedule without Extra Help. Exact coverage, pharmacy participation, price, and deductible completion are not verified.'],
     ['Medications entered',s.drugs.join('\n') || 'None'],['Providers / facilities entered',s.people.join('\n') || 'None'],
     ['Dental priority',priorityLabel(weights.dental)],['OTC priority',priorityLabel(weights.otc)],['Lower premium priority',priorityLabel(weights.premium)],
@@ -143,13 +143,14 @@ async function updateCounty() {
   if(!/^\d{5}$/.test(zip))return;
   try {
     const [,zipMap]=await data();if(revision!==locationRevision)return;
-    const counties=zipMap[zip] || [];
-    county.replaceChildren(new Option(counties.length?'Select county':'ZIP not found in NC lookup',''));
+    const counties=(zipMap[zip] || []).filter(c=>c.state===state.value);
+    county.replaceChildren(new Option(counties.length?'Select county':'ZIP not found in selected state',''));
     for(const c of counties)county.append(new Option(c.name,c.code));
     county.value=counties.length===1?counties[0].code:(counties.some(c=>c.code===chosen)?chosen:'');
   } catch(e) {if(revision===locationRevision)county.replaceChildren(new Option('County lookup unavailable — retry search',''));}
 }
 form.elements.zip.addEventListener('input',updateCounty);
+state.addEventListener('change',()=>{request?.abort();county.value='';updateCounty();comparisonState?.container.scrollObserver?.disconnect();comparisonState=null;results.replaceChildren(el('p','State changed. Search again to compare plans.'));});
 form.addEventListener('submit',async event=>{
   event.preventDefault();comparisonState?.container.scrollObserver?.disconnect();comparisonState=null;if(request)request.abort();request=new AbortController();const signal=request.signal;
   const zip=form.elements.zip.value.trim();const chosen=county.value;
@@ -163,28 +164,28 @@ form.addEventListener('submit',async event=>{
     if(!/^\d{5}$/.test(zip))throw new Error('Enter a five-digit ZIP code.');
     if(people.length>3 || drugs.length>10)throw new Error('Search up to 3 providers/facilities and 10 medications at a time.');
     const [inventory,zipMap,formularies]=await data();if(signal.aborted)return;
-    const counties=zipMap[zip] || [];county.replaceChildren(new Option('Select county',''));
+    const counties=(zipMap[zip] || []).filter(c=>c.state===state.value);county.replaceChildren(new Option('Select county',''));
     for(const c of counties)county.append(new Option(c.name,c.code));
     const selected=counties.find(c=>c.code===chosen) || (counties.length===1?counties[0]:null);
     county.value=selected?.code || '';
     if(!selected) {
-      results.replaceChildren(el('h2','Choose your location'),el('p',counties.length?'This ZIP crosses county boundaries. Select your county, then search again.':'This ZIP is not in the prepared NC lookup. No plan availability inferred.'));
+      results.replaceChildren(el('h2','Choose your location'),el('p',counties.length?'This ZIP crosses county boundaries. Select your county, then search again.':'This ZIP is not in the prepared lookup for the selected state. No plan availability inferred.'));
       if(counties.length)county.focus();return;
     }
-    const plans=inventory.plans.filter(p=>p.counties.includes(selected.code) && (form.elements.special_needs.checked || !p.special_needs));
+    const plans=inventory.plans.filter(p=>p.state===state.value && p.counties.includes(selected.code) && (form.elements.special_needs.checked || !p.special_needs));
     results.replaceChildren(el('h2',`${plans.length} plans · ${selected.name} County`),el('p',`Official 2027 county mapping. Data refreshed ${inventory.snapshot.retrieved_at.slice(0,10)}. Confirm eligibility and enrollment requirements.`));
     if(!plans.length)results.append(el('p','Devoted’s published mapping lists no 2027 plans for this county.'));
     const comparison=el('section',undefined,'panel');results.append(comparison);
-    comparisonState={container:comparison,plans,drugs,drugSelections,people,providerSelections,providerStatus:new Map(),coverage:[],zip,county:selected.name,snapshot:inventory.snapshot.retrieved_at,includeSpecial:form.elements.special_needs.checked};renderComparison();
+    comparisonState={container:comparison,plans,drugs,drugSelections,people,providerSelections,providerStatus:new Map(),coverage:[],zip,county:selected.name,state:state.value,snapshot:inventory.snapshot.retrieved_at,includeSpecial:form.elements.special_needs.checked};renderComparison();
     const sections=new Map();
     for(const plan of plans) {
       const card=el('article',undefined,'plan');card.append(el('span',plan.business,'badge'),el('h3',plan.name),
-        el('p',`${plan.carrier} · ${plan.year} · ${selected.name}, NC · ZIP ${zip}`),el('p','Monthly premium: '+plan.premium));
+        el('p',`${plan.carrier} · ${plan.year} · ${selected.name}, ${state.value} · ZIP ${zip}`),el('p','Monthly premium: '+plan.premium));
       card.append(el('small','Premium extracted from the Summary of Benefits. Other costs and conditions apply.'));
       for(const doc of plan.documents) {const row=el('p');link(row,({benefits:'Summary of Benefits',evidence:'Evidence of Coverage',formulary:'2027 Drug List'})[doc.kind],doc.url);card.append(row);}
       for(const drug of drugs){const matches=drugMatches(plan,drug,formularies);check(card,'Medication',drug,matches);comparisonState.coverage.push({plan:plan.name,kind:'Medication',term:drug,matches});}
       const providerSection=el('div');card.append(providerSection);sections.set(plan.id,providerSection);
-      link(card,'Official provider search',`https://www.devoted.com/search-providers/#filterType=all&p=${encodeURIComponent(plan.name.includes('(PPO')?'PPO':'HMO')}&q=&s=NC&y=2027`);
+      link(card,'Official provider search',`https://www.devoted.com/search-providers/#filterType=all&p=${encodeURIComponent(plan.name.includes('(PPO')?'PPO':'HMO')}&q=&s=${encodeURIComponent(state.value)}&y=2027`);
       const details=el('details');details.id='plan-'+plan.id;details.append(el('summary',plan.name+' · Plan details'),card);results.append(details);
     }
     if(people.length && plans.length) {

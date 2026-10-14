@@ -16,3 +16,5 @@ assert.equal(other.matches.get('plan')[0].detail,'Other office');
 const wrongNetwork=await providers('Test Provider',[{id:'plan',network:[{reference:'Organization/different'}]}],new AbortController().signal,{personId:'person',locationId:'other',manual:false});
 assert.equal(wrongNetwork.matches.get('plan').length,0);
 console.log('Provider identity, exact office and network isolation passed');
+
+const wrongState=await providers('Test Provider',[{...plans[0],state:'FL'}],new AbortController().signal,{personId:'person',locationId:'other',manual:false});assert.equal(wrongState.matches.get('plan').length,0);

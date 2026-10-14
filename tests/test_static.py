@@ -7,7 +7,7 @@ class StaticDataTests(unittest.TestCase):
     def test_service_area_examples(self):
         plans=json.loads((DATA/'plans.json').read_text())['plans']
         counties=json.loads((DATA/'zip-counties.json').read_text())
-        self.assertEqual(len(plans),37)
+        self.assertEqual(sum(p['state']=='NC' for p in plans),37)
         for zip_code,count in [('28202',12),('28697',12),('27601',0)]:
             self.assertEqual(len(counties[zip_code]),1)
             code=counties[zip_code][0]['code']
@@ -24,3 +24,12 @@ class StaticDataTests(unittest.TestCase):
                 if doc['kind']=='formulary':self.assertIn(doc['url'],drugs)
         self.assertTrue(any('atorvastatin' in row['name'].lower() for f in drugs.values() for row in f['rows']))
         self.assertTrue(all(row['page']>0 for f in drugs.values() for row in f['rows']))
+
+    def test_all_target_states_and_county_state_isolation(self):
+        import app
+        plans=json.loads((DATA/'plans.json').read_text())['plans']
+        counties=json.loads((DATA/'zip-counties.json').read_text())
+        self.assertEqual({p['state'] for p in plans},set(app.STATES))
+        county_states={c['code']:c['state'] for values in counties.values() for c in values}
+        for p in plans:
+            self.assertTrue(all(county_states[code]==p['state'] for code in p['counties']))

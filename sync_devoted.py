@@ -69,19 +69,35 @@ def extract(url):
     return url,text,hashlib.sha256(content).hexdigest()
 
 
-def sync(path=app.DB):
+def sync(path=app.DB, refresh=False):
     app.initialize(path)
     source = json.loads(fetch(FINDER))['result']['data']
-    plans = [p for p in source['allPbps']['nodes'] if p['year']=='2027' and re.search(r'\bNC\b',p['name'])]
-    counties = [c for c in source['site']['siteMetadata']['ssaCountiesForMarketablePbps'] if c['state_abbreviation']=='NC']
+    counties = [c for c in source['site']['siteMetadata']['ssaCountiesForMarketablePbps'] if c['state_abbreviation'] in app.STATES]
+    county_states={c['code']:c['state_abbreviation'] for c in counties}
+    plans=[]
+    for p in source['allPbps']['nodes']:
+        states={county_states[a['county_code']] for a in p['service_areas'] if a['county_code'] in county_states}
+        if p['year']=='2027' and states:
+            if len(states)!=1:raise ValueError('Ambiguous plan state')
+            plans.append({**p,'state':states.pop()})
+    with app.connect(path) as db:
+        existing=list(db.execute('SELECT * FROM devoted_documents'))
+        cached={} if refresh else {r['url']:(r['url'],r['text'],r['sha256']) for r in existing}
+        cached_dates={} if refresh else {r['url']:r['retrieved_at'] for r in existing}
     if not plans or not counties:
         raise ValueError('Website service-area data missing')
     with concurrent.futures.ThreadPoolExecutor(max_workers=4) as pool:
         links = list(pool.map(plan_links,plans))
-        urls = sorted({url for _,_,items in links for _,url in items})
-        documents = list(pool.map(extract,urls))
+        urls = sorted({url for _,_,items in links for kind,url in items if kind!='evidence'})
+        fresh=list(pool.map(extract,[u for u in urls if u not in cached]))
+        documents=[cached[u] for u in urls if u in cached]+fresh
     checked = datetime.now(timezone.utc).isoformat(timespec='seconds')
     with app.connect(path) as db:
+        db.executescript('CREATE TABLE IF NOT EXISTS devoted_county_states (code TEXT PRIMARY KEY,state TEXT NOT NULL); CREATE TABLE IF NOT EXISTS devoted_catalog (locator TEXT PRIMARY KEY,state TEXT NOT NULL,name TEXT NOT NULL);')
+        db.execute('DELETE FROM devoted_county_states')
+        db.execute('DELETE FROM devoted_catalog')
+        db.executemany('INSERT INTO devoted_county_states VALUES (?,?)',county_states.items())
+        db.executemany('INSERT INTO devoted_catalog VALUES (?,?,?)',[(p['record_locator'],p['state'],p['name']) for p in plans])
         db.execute('DELETE FROM devoted_zip_counties')
         db.execute('DELETE FROM devoted_service_areas')
         db.execute('DELETE FROM devoted_documents')
@@ -93,14 +109,17 @@ def sync(path=app.DB):
             db.executemany('INSERT INTO devoted_service_areas VALUES (?,?,?)',
                            [(p['record_locator'],a['county_code'],p['name']) for a in p['service_areas']])
         for url,text,digest in documents:
-            db.execute('INSERT INTO devoted_documents VALUES (?,?,?,?,?)',(url,text,digest,checked,2027))
+            db.execute('INSERT INTO devoted_documents VALUES (?,?,?,?,?)',(url,text,digest,cached_dates.get(url,checked),2027))
         for locator,page,items in links:
             db.executemany('INSERT INTO devoted_document_links VALUES (?,?,?,?)',
                            [(locator,kind,url,page) for kind,url in items])
         db.execute('INSERT OR REPLACE INTO devoted_sync VALUES (1,?,?,?)',
                    (checked,source['site']['siteMetadata']['lastBuildTime'],FINDER))
-    print(f'Synced {len(plans)} plans, {len(counties)} NC counties, {len(documents)} distinct documents.',flush=True)
+    print(f'Synced {len(plans)} plans, {len(counties)} target-state counties, {len(documents)} distinct documents.',flush=True)
 
 
 if __name__ == '__main__':
-    sync()
+    import argparse
+    parser=argparse.ArgumentParser()
+    parser.add_argument('--refresh',action='store_true',help='Redownload existing document URLs')
+    sync(refresh=parser.parse_args().refresh)

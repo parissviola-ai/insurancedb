@@ -9,3 +9,5 @@ assert.equal(r.matches.get('match').length,1);assert(r.matches.get('match')[0].d
 const different=await providers('Test',plans,new AbortController().signal,{...selection,locationId:'other'});assert.equal(different.matches.get('match').length,0);
 const manual=await providers('Test',plans,new AbortController().signal,{kind:'facility',manual:true});assert.equal(manual.matches.get('match').length,0);
 console.log('Facility network, exact location, contact information and manual uncertainty passed');
+
+const wrongState=await providers('Test',[{...plans[0],state:'FL'}],new AbortController().signal,selection);assert.equal(wrongState.matches.get('match').length,0);

@@ -46,7 +46,7 @@ export async function providers(term, plans, signal, selection=null) {
       for(const ref of role.location || []) {
         if(selection && !selection.manual && ref.reference!=='Location/'+selection.locationId)continue;
         const location=await fhirGet(fhirBase+ref.reference,signal); const a=location.address || {};
-        if(a.state!=='NC') continue;
+        if(a.state!==(plans[0]?.state || 'NC')) continue;
         const name=person.name?.[0] || {}; const label=name.text || [...(name.given || []),name.family || ''].join(' ');
         const detail=a.text || [...(a.line || []),a.city,a.state,a.postalCode].filter(Boolean).join(', ');
         for(const plan of eligible) {
@@ -62,7 +62,7 @@ export async function providers(term, plans, signal, selection=null) {
   return {matches,truncated};
 }
 
-export async function providerSuggestions(term,signal) {
+export async function providerSuggestions(term,signal,state='NC') {
   const people=await fhirSearch('Practitioner',{...personQuery(term),_count:'5'},signal,1);
   const options=[],seen=new Set();let truncated=people.truncated;
   for(const person of people.rows.slice(0,5)) {
@@ -74,7 +74,7 @@ export async function providerSuggestions(term,signal) {
       if(role.active!==true || !role.period?.start || role.period.start>'2027-01-01' || !role.period.end || role.period.end<'2027-12-31')continue;
       for(const ref of role.location || []) {
         const key=person.id+'|'+ref.reference;if(seen.has(key))continue;
-        const location=await fhirGet(fhirBase+ref.reference,signal);const a=location.address || {};if(a.state!=='NC')continue;
+        const location=await fhirGet(fhirBase+ref.reference,signal);const a=location.address || {};if(a.state!==state)continue;
         seen.add(key);
         const office=a.text || [...(a.line || []),a.city,a.state,a.postalCode].filter(Boolean).join(', ');
         const specialties=(role.specialty || []).flatMap(s=>s.text?[s.text]:(s.coding || []).map(c=>c.display || 'Taxonomy '+c.code));
@@ -89,13 +89,13 @@ export async function providerSuggestions(term,signal) {
 function active2027(r){return r.active===true && r.period?.start && r.period.start<='2027-01-01' && r.period.end && r.period.end>='2027-12-31';}
 function officeText(location){const a=location.address || {};return a.text || [...(a.line || []),a.city,a.state,a.postalCode].filter(Boolean).join(', ');}
 function phoneOf(...resources){return resources.flatMap(r=>r?.telecom || []).find(t=>t.system==='phone')?.value || '';}
-export async function facilitySuggestions(term,signal){
+export async function facilitySuggestions(term,signal,state='NC'){
  const q={_count:'5'};if(/^\d{10}$/.test(term))q.identifier='http://hl7.org/fhir/sid/us-npi|'+term;else q.name=term;
  const organizations=await fhirSearch('Organization',q,signal,1);const options=[],seen=new Set();let truncated=organizations.truncated;
  for(const org of organizations.rows){
   const affiliations=await fhirSearch('OrganizationAffiliation',{'participating-organization':'Organization/'+org.id,_count:'100'},signal);truncated ||= affiliations.truncated;
   for(const affiliation of affiliations.rows){if(!active2027(affiliation))continue;
-   for(const ref of affiliation.location || []){const key=org.id+'|'+ref.reference;if(seen.has(key))continue;const location=await fhirGet(fhirBase+ref.reference,signal);if(location.address?.state!=='NC')continue;seen.add(key);
+   for(const ref of affiliation.location || []){const key=org.id+'|'+ref.reference;if(seen.has(key))continue;const location=await fhirGet(fhirBase+ref.reference,signal);if(location.address?.state!==state)continue;seen.add(key);
     const npi=(org.identifier || []).find(i=>i.system==='http://hl7.org/fhir/sid/us-npi')?.value || 'not supplied';
     const type=(org.type || []).flatMap(t=>t.text?[t.text]:(t.coding || []).map(c=>c.display || c.code)).join('; ') || 'Facility';
     options.push({kind:'facility',orgId:org.id,locationId:location.id,name:org.name || 'Unnamed facility',npi,office:officeText(location),specialty:type,phone:phoneOf(location,org,affiliation),manual:false});
@@ -111,7 +111,7 @@ async function facilityMatches(selection,plans,signal){
  const org=await fhirGet(fhirBase+'Organization/'+selection.orgId,signal);
  const affiliations=await fhirSearch('OrganizationAffiliation',{'participating-organization':'Organization/'+selection.orgId,_count:'100'},signal);
  for(const affiliation of affiliations.rows){if(!active2027(affiliation) || !(affiliation.location || []).some(l=>l.reference==='Location/'+selection.locationId))continue;
-  const location=await fhirGet(fhirBase+'Location/'+selection.locationId,signal);if(location.address?.state!=='NC')continue;
+  const location=await fhirGet(fhirBase+'Location/'+selection.locationId,signal);if(location.address?.state!==(plans[0]?.state || 'NC'))continue;
   for(const plan of plans){if(!(plan.network || []).some(n=>(affiliation.network || []).some(a=>a.reference===n.reference)))continue;
    matches.get(plan.id).push({name:org.name,detail:officeText(location)+(phoneOf(location,org,affiliation)?' · Phone '+phoneOf(location,org,affiliation):''),status:'Facility listed in network',restrictions:'Facility location is listed for this network in 2027. Call to confirm services and participation. Clinicians at the facility require separate checks.',source_url:fhirBase+'OrganizationAffiliation/'+affiliation.id});
   }
