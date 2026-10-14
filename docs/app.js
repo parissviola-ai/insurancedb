@@ -14,7 +14,7 @@ function link(parent,label,url) {if(!/^https:\/\//.test(url))return;const n=el('
 let dataPromise;let request;
 async function data() {
   if(!dataPromise) dataPromise=Promise.all(['plans','zip-counties','formularies','wellcare'].map(async name=> {
-    const r=await fetch('./data/'+name+'.json');if(!r.ok)throw new Error('Prepared plan data could not be loaded. Please retry.');return r.json();
+    const r=await fetch('./data/'+name+'.json?v=wellcare-nc-full');if(!r.ok)throw new Error('Prepared plan data could not be loaded. Please retry.');return r.json();
   })).then(([inventory,zipMap,formularies,wellcare])=>[{...inventory,wellcare_counties:wellcare.county_options || [],plans:[...inventory.plans,...wellcare.plans]},zipMap,{...formularies,...wellcare.formularies}]).catch(e=>{dataPromise=null;throw e;});
   return dataPromise;
 }
