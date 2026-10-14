@@ -6,9 +6,16 @@ async function fhirGet(url, signal) {
   if (parsed.origin !== 'https://fhir.devoted.com' || !/^\/fhir(?:\/|$)/.test(parsed.pathname)) throw new Error('Unexpected directory URL');
   const cached=fhirCache.get(url);
   if(cached && Date.now()-cached.time<300000)return cached.data;
-  const response = await fetch(url, {signal, credentials:'omit', headers:{Accept:'application/fhir+json'}});
-  if (!response.ok) throw new Error('Provider directory request failed');
-  const data = await response.json();
+  const controller=new AbortController();let timedOut=false;
+  const cancel=()=>controller.abort();if(signal?.aborted)controller.abort();signal?.addEventListener('abort',cancel,{once:true});
+  const timer=setTimeout(()=>{timedOut=true;controller.abort();},20000);
+  let data;
+  try {
+    const response=await fetch(url,{signal:controller.signal,credentials:'omit',headers:{Accept:'application/fhir+json'}});
+    if(!response.ok)throw new Error('Provider directory request failed');
+    data=await response.json();
+  } catch(error){if(timedOut)throw new Error('Directory request timed out');throw error;}
+  finally{clearTimeout(timer);signal?.removeEventListener('abort',cancel);}
   if (data.resourceType === 'OperationOutcome') throw new Error('Provider directory search failed');
   if (fhirCache.size > 200) fhirCache.clear();
   fhirCache.set(url,{time:Date.now(),data}); return data;
@@ -63,7 +70,9 @@ export async function providers(term, plans, signal, selection=null) {
 }
 
 export async function providerSuggestions(term,signal,state='NC') {
-  const people=await fhirSearch('Practitioner',{...personQuery(term),_count:'5','_has:PractitionerRole:practitioner:location.address-state':state},signal,1);
+  const query={...personQuery(term),_count:'5'};
+  if(!/^\d{10}$/.test(term))query['_has:PractitionerRole:practitioner:location.address-state']=state;
+  const people=await fhirSearch('Practitioner',query,signal,1);
   const options=[],seen=new Set();let truncated=people.truncated;
   for(const person of people.rows.slice(0,5)) {
     const roles=await fhirSearch('PractitionerRole',{practitioner:'Practitioner/'+person.id,_count:'100'},signal);
@@ -90,7 +99,7 @@ function active2027(r){return r.active===true && r.period?.start && r.period.sta
 function officeText(location){const a=location.address || {};return a.text || [...(a.line || []),a.city,a.state,a.postalCode].filter(Boolean).join(', ');}
 function phoneOf(...resources){return resources.flatMap(r=>r?.telecom || []).find(t=>t.system==='phone')?.value || '';}
 export async function facilitySuggestions(term,signal,state='NC'){
- const q={_count:'5','_has:OrganizationAffiliation:participating-organization:location.address-state':state};if(/^\d{10}$/.test(term))q.identifier='http://hl7.org/fhir/sid/us-npi|'+term;else q.name=term;
+ const q={_count:'5'};if(!/^\d{10}$/.test(term))q['_has:OrganizationAffiliation:participating-organization:location.address-state']=state;if(/^\d{10}$/.test(term))q.identifier='http://hl7.org/fhir/sid/us-npi|'+term;else q.name=term;
  const organizations=await fhirSearch('Organization',q,signal,1);const options=[],seen=new Set();let truncated=organizations.truncated;
  for(const org of organizations.rows){
   const affiliations=await fhirSearch('OrganizationAffiliation',{'participating-organization':'Organization/'+org.id,_count:'100'},signal);truncated ||= affiliations.truncated;
