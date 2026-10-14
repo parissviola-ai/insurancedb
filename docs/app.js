@@ -4,7 +4,7 @@ import {workbook} from './excel.js';
 import {medicationPicker} from './medications.js';
 import {providerPicker} from './provider-picker.js?v=15-states';
 const form=document.querySelector('#search'); const results=document.querySelector('#results');
-const state=document.querySelector('#state');for(const code of ['NC','SC','GA','FL','AL','TN','VA','KY','LA','TX','OH','PA','DE','MI','NY'])state.append(new Option(code,code));
+const state=document.querySelector('#state');state.append(new Option('Select state',''));for(const code of ['NC','SC','GA','FL','AL','TN','VA','KY','LA','TX','OH','PA','DE','MI','NY'])state.append(new Option(code,code));state.value='NC';
 const business=form.elements.business;business.replaceChildren(new Option('Medicare Advantage','Medicare Advantage'));
 form.elements.carrier.value='Devoted Health';form.elements.carrier.readOnly=true;
 const county=form.elements.county;
@@ -136,21 +136,29 @@ function exportComparison(ranked,weights) {
 }
 for(const key of priorityKeys)form.elements['weight_'+key].addEventListener('change',renderComparison);
 let locationRevision=0;
-async function updateCounty() {
+async function updateCounty(autoState=true) {
   const revision=++locationRevision;
   const zip=form.elements.zip.value.trim();const chosen=county.value;
   county.replaceChildren(new Option(/^\d{5}$/.test(zip)?'Loading counties…':'Enter a five-digit ZIP',''));
   if(!/^\d{5}$/.test(zip))return;
   try {
     const [,zipMap]=await data();if(revision!==locationRevision)return;
+    const zipStates=[...new Set((zipMap[zip] || []).map(c=>c.state))];
+    if(autoState && zipStates.length===1 && state.value!==zipStates[0]) {
+      state.value=zipStates[0];state.dispatchEvent(new Event('change'));return;
+    }
+    if(autoState && zipStates.length>1) {
+      state.value='';state.dispatchEvent(new Event('change'));return;
+    }
+    if(zipStates.length>1 && !state.value){county.replaceChildren(new Option('Choose a state for this ZIP',''));return;}
     const counties=(zipMap[zip] || []).filter(c=>c.state===state.value);
     county.replaceChildren(new Option(counties.length?'Select county':'ZIP not found in selected state',''));
     for(const c of counties)county.append(new Option(c.name,c.code));
     county.value=counties.length===1?counties[0].code:(counties.some(c=>c.code===chosen)?chosen:'');
   } catch(e) {if(revision===locationRevision)county.replaceChildren(new Option('County lookup unavailable — retry search',''));}
 }
-form.elements.zip.addEventListener('input',updateCounty);
-state.addEventListener('change',()=>{request?.abort();county.value='';updateCounty();comparisonState?.container.scrollObserver?.disconnect();comparisonState=null;results.replaceChildren(el('p','State changed. Search again to compare plans.'));});
+form.elements.zip.addEventListener('input',()=>updateCounty(true));
+state.addEventListener('change',()=>{request?.abort();county.value='';updateCounty(false);comparisonState?.container.scrollObserver?.disconnect();comparisonState=null;results.replaceChildren(el('p','State changed. Search again to compare plans.'));});
 form.addEventListener('submit',async event=>{
   event.preventDefault();comparisonState?.container.scrollObserver?.disconnect();comparisonState=null;if(request)request.abort();request=new AbortController();const signal=request.signal;
   const zip=form.elements.zip.value.trim();const chosen=county.value;
