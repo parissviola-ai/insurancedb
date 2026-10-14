@@ -1,8 +1,8 @@
-import {providers} from './provider.js?v=surname-search-2';
+import {providers} from './provider.js?v=directory-diagnostics';
 import {rankPlans,priorityKeys} from './ranking.js';
 import {workbook} from './excel.js';
 import {medicationPicker} from './medications.js';
-import {providerPicker} from './provider-picker.js?v=surname-search-2';
+import {providerPicker} from './provider-picker.js?v=directory-diagnostics';
 const form=document.querySelector('#search'); const results=document.querySelector('#results');
 const state=document.querySelector('#state');state.append(new Option('Select state',''));for(const code of ['NC','SC','GA','FL','AL','TN','VA','KY','LA','TX','OH','PA','DE','MI','NY'])state.append(new Option(code,code));
 const business=form.elements.business;business.replaceChildren(new Option('Medicare Advantage','Medicare Advantage'));

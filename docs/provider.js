@@ -12,9 +12,9 @@ async function fhirGet(url, signal) {
   let data;
   try {
     const response=await fetch(url,{signal:controller.signal,credentials:'omit',headers:{Accept:'application/fhir+json'}});
-    if(!response.ok)throw new Error('Provider directory request failed');
+    if(!response.ok){const error=new Error('Directory returned HTTP '+response.status);error.status=response.status;throw error;}
     data=await response.json();
-  } catch(error){if(timedOut)throw new Error('Directory request timed out');throw error;}
+  } catch(error){if(timedOut)throw new Error('Directory request timed out');if(error instanceof TypeError)throw new Error('Browser could not connect to the directory');if(error instanceof SyntaxError)throw new Error('Directory returned an unreadable response');throw error;}
   finally{clearTimeout(timer);signal?.removeEventListener('abort',cancel);}
   if (data.resourceType === 'OperationOutcome') throw new Error('Provider directory search failed');
   if (fhirCache.size > 200) fhirCache.clear();
@@ -84,9 +84,9 @@ export async function providerSuggestions(term,signal,state='NC') {
     partial['family:contains']=words[words.length-1];
     people=await fhirSearch('Practitioner',partial,signal,1);
   }
-  const options=[],seen=new Set();let truncated=people.truncated;
+  const options=[],seen=new Set();let truncated=people.truncated,unavailable=false;
   for(const person of people.rows.slice(0,5)) {
-    const roles=await fhirSearch('PractitionerRole',{practitioner:'Practitioner/'+person.id,_count:'100'},signal);
+    let roles;try{roles=await fhirSearch('PractitionerRole',{practitioner:'Practitioner/'+person.id,_count:'100'},signal);}catch(error){if(signal?.aborted)throw error;unavailable=true;truncated=true;continue;}
     truncated ||= roles.truncated;
     const npi=(person.identifier || []).find(i=>i.system==='http://hl7.org/fhir/sid/us-npi')?.value || 'not supplied';
     const name=person.name?.[0] || {};const display=name.text || [...(name.given || []),name.family || ''].join(' ');
@@ -94,16 +94,16 @@ export async function providerSuggestions(term,signal,state='NC') {
       if(role.active!==true || !role.period?.start || role.period.start>'2027-01-01' || !role.period.end || role.period.end<'2027-12-31')continue;
       for(const ref of role.location || []) {
         const key=person.id+'|'+ref.reference;if(seen.has(key))continue;
-        const location=await fhirGet(fhirBase+ref.reference,signal);const a=location.address || {};if(a.state!==state)continue;
+        let location;try{location=await fhirGet(fhirBase+ref.reference,signal);}catch(error){if(signal?.aborted)throw error;unavailable=true;truncated=true;continue;}const a=location.address || {};if(a.state!==state)continue;
         seen.add(key);
         const office=a.text || [...(a.line || []),a.city,a.state,a.postalCode].filter(Boolean).join(', ');
         const specialties=(role.specialty || []).flatMap(s=>s.text?[s.text]:(s.coding || []).map(c=>c.display || 'Taxonomy '+c.code));
         options.push({personId:person.id,locationId:location.id,name:display,npi,office,specialty:specialties.join('; ') || 'Specialty not supplied',manual:false});
-        if(options.length>=20)return {options,truncated:true};
+        if(options.length>=20)return {options,truncated:true,unavailable};
       }
     }
   }
-  return {options,truncated};
+  return {options,truncated,unavailable};
 }
 
 function active2027(r){return r.active===true && r.period?.start && r.period.start<='2027-01-01' && r.period.end && r.period.end>='2027-12-31';}
