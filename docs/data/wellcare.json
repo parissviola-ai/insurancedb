@@ -1,0 +1,114 @@
+{
+  "plans": [
+    {
+      "id": "wellcare-H1914-007-2027",
+      "locator": "H1914-007-2027",
+      "name": "Wellcare Simple Open (PPO)",
+      "carrier": "Wellcare",
+      "year": 2027,
+      "business": "Medicare Advantage",
+      "state": "NC",
+      "counties": [
+        "34590"
+      ],
+      "verified_zips": [
+        "28202"
+      ],
+      "premium": "$0",
+      "benefit_metrics": {
+        "premium": {
+          "amount": 0,
+          "period": "month",
+          "notes": "Part B premium and other costs still apply.",
+          "source_url": "https://contentserver.destinationrx.com/ContentServer/DRxProductContent/PDFs/149_0/2027/H1914_007_2027_NC_SB_PPO_7014640ENG_M.pdf#page=3",
+          "status": "Source amount reviewed"
+        },
+        "dental": {
+          "amount": 1500,
+          "period": "year",
+          "notes": "Annual comprehensive dental limit shared across in-network and out-of-network services; network cost sharing and exclusions apply.",
+          "source_url": "https://contentserver.destinationrx.com/ContentServer/DRxProductContent/PDFs/149_0/2027/H1914_007_2027_NC_SB_PPO_7014640ENG_M.pdf#page=12",
+          "status": "Source amount reviewed"
+        },
+        "otc": {
+          "amount": 51,
+          "period": "quarter",
+          "notes": "Equivalent to $17 monthly ($204 yearly). Shared Spendables allowance for OTC, dental, vision and hearing, not separate allowances; rolls over within the plan year.",
+          "source_url": "https://contentserver.destinationrx.com/ContentServer/DRxProductContent/PDFs/149_0/2027/H1914_007_2027_NC_SB_PPO_7014640ENG_M.pdf#page=25",
+          "status": "Source amount reviewed"
+        },
+        "transportation": {
+          "amount": 0,
+          "period": "one-way rides/year",
+          "notes": "Non-emergency medical transportation is not covered.",
+          "source_url": "https://contentserver.destinationrx.com/ContentServer/DRxProductContent/PDFs/149_0/2027/H1914_007_2027_NC_SB_PPO_7014640ENG_M.pdf#page=16",
+          "status": "Source amount reviewed"
+        }
+      },
+      "special_needs": false,
+      "ma_only": false,
+      "network": [],
+      "source_url": "https://wellcare.isf.io/",
+      "verified_on": "2026-10-14",
+      "scope_note": "Limited import: one verified plan in ZIP 28202. Only atorvastatin and amlodipine/atorvastatin entries have been imported. Other medications and provider networks remain unverified.",
+      "drug_costs": {
+        "tiers": {
+          "6": {
+            "type": "copay",
+            "display": "$0 per prescription",
+            "source_url": "https://contentserver.destinationrx.com/ContentServer/DRxProductContent/PDFs/149_0/2027/H1914_007_2027_NC_SB_PPO_7014640ENG_M.pdf#page=18"
+          }
+        },
+        "supply_days": 30,
+        "pharmacy_type": "Preferred or standard network retail",
+        "stage": "Initial coverage",
+        "extra_help": "Standard schedule without Extra Help",
+        "conditions": "Exact covered drug, 30-day supply, preferred or standard network retail pharmacy. Actual pharmacy participation and dispensing price require confirmation.",
+        "deductible_note": "Tier 6 has no deductible. The $700 deductible applies to Tiers 2–5."
+      },
+      "documents": [
+        {
+          "kind": "benefits",
+          "url": "https://contentserver.destinationrx.com/ContentServer/DRxProductContent/PDFs/149_0/2027/H1914_007_2027_NC_SB_PPO_7014640ENG_M.pdf",
+          "page_url": "https://wellcare.isf.io/",
+          "retrieved_at": "2026-10-14T21:54:20.332280+00:00",
+          "sha256": "26c8227d33a15275ce66041d6e92d0450eed568e235bab74b704c8a98c0a111b"
+        },
+        {
+          "kind": "formulary",
+          "url": "https://fm.formularynavigator.com/FBO/67/27156_6T_Enhanced_Plus_Select_MAPD_Comp_Form_52.pdf",
+          "page_url": "https://wellcare.isf.io/",
+          "retrieved_at": "2026-10-14T21:54:20.332280+00:00",
+          "sha256": "5e596df7babef24e4c4cbcba365332faf61fcbe5508b7d954a56013e71dff7cd"
+        },
+        {
+          "kind": "evidence",
+          "url": "https://contentserver.destinationrx.com/ContentServer/DRxProductContent/PDFs/149_0/2027/H1914_007_2027_NC_EOC_PPO_7001672ENG_C.pdf",
+          "page_url": "https://wellcare.isf.io/",
+          "retrieved_at": "2026-10-14T21:54:20.332280+00:00",
+          "sha256": null
+        }
+      ]
+    }
+  ],
+  "formularies": {
+    "https://fm.formularynavigator.com/FBO/67/27156_6T_Enhanced_Plus_Select_MAPD_Comp_Form_52.pdf": {
+      "rows": [
+        {
+          "name": "atorvastatin oral tablet 10 mg, 20 mg, 40 mg, 80 mg",
+          "tier": "6",
+          "restrictions": "QL (30 EA per 30 days)",
+          "page": 90
+        },
+        {
+          "name": "amlodipine-atorvastatin oral tablet 10-10 mg, 10-20 mg, 10-40 mg, 10-80 mg, 2.5-10 mg, 2.5-20 mg, 2.5-40 mg, 5-10 mg, 5-20 mg, 5-40 mg, 5-80 mg",
+          "tier": "6",
+          "restrictions": "QL (30 EA per 30 days)",
+          "page": 90
+        }
+      ],
+      "retrieved_at": "2026-10-14T21:54:20.332280+00:00"
+    }
+  },
+  "retrieved_at": "2026-10-14T21:54:20.332280+00:00"
+}
