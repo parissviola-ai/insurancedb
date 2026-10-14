@@ -2,6 +2,7 @@ import {providers} from './provider.js';
 import {rankPlans,priorityKeys} from './ranking.js';
 import {workbook} from './excel.js';
 import {medicationPicker} from './medications.js';
+import {providerPicker} from './provider-picker.js';
 const form=document.querySelector('#search'); const results=document.querySelector('#results');
 const state=document.querySelector('#state');state.append(new Option('North Carolina','NC'));
 const business=form.elements.business;business.replaceChildren(new Option('Medicare Advantage','Medicare Advantage'));
@@ -17,6 +18,7 @@ async function data() {
   return dataPromise;
 }
 const picker=medicationPicker(data);
+const providerInput=providerPicker();
 function terms(value) {return value.split('\n').map(s=>s.trim()).filter(Boolean);}
 function drugMatches(plan,term,formularies) {
   const hits=[];
@@ -152,9 +154,11 @@ form.addEventListener('submit',async event=>{
   event.preventDefault();comparisonState?.container.scrollObserver?.disconnect();comparisonState=null;if(request)request.abort();request=new AbortController();const signal=request.signal;
   const zip=form.elements.zip.value.trim();const chosen=county.value;
   const drugSelections=picker.getSelections();
-  const drugs=drugSelections.map(i=>i.label),people=terms(form.elements.provider.value);
+  const providerSelections=providerInput.getSelections();
+  const drugs=drugSelections.map(i=>i.label),people=providerSelections.map(i=>i.label);
   results.setAttribute('aria-busy','true');results.replaceChildren(el('p','Searching…'));
   try {
+    if(providerInput.hasPending())throw new Error('Select or add the provider you typed, or clear the provider field before searching.');
     if(picker.hasPending())throw new Error('Add the medication you typed, or clear the medication field before searching.');
     if(!/^\d{5}$/.test(zip))throw new Error('Enter a five-digit ZIP code.');
     if(people.length>3 || drugs.length>10)throw new Error('Search up to 3 providers and 10 medications at a time.');
@@ -171,7 +175,7 @@ form.addEventListener('submit',async event=>{
     results.replaceChildren(el('h2',`${plans.length} plans · ${selected.name} County`),el('p',`Official 2027 county mapping. Data refreshed ${inventory.snapshot.retrieved_at.slice(0,10)}. Confirm eligibility and enrollment requirements.`));
     if(!plans.length)results.append(el('p','Devoted’s published mapping lists no 2027 plans for this county.'));
     const comparison=el('section',undefined,'panel');results.append(comparison);
-    comparisonState={container:comparison,plans,drugs,drugSelections,people,providerStatus:new Map(),coverage:[],zip,county:selected.name,snapshot:inventory.snapshot.retrieved_at,includeSpecial:form.elements.special_needs.checked};renderComparison();
+    comparisonState={container:comparison,plans,drugs,drugSelections,people,providerSelections,providerStatus:new Map(),coverage:[],zip,county:selected.name,snapshot:inventory.snapshot.retrieved_at,includeSpecial:form.elements.special_needs.checked};renderComparison();
     const sections=new Map();
     for(const plan of plans) {
       const card=el('article',undefined,'plan');card.append(el('span',plan.business,'badge'),el('h3',plan.name),
@@ -187,7 +191,7 @@ form.addEventListener('submit',async event=>{
       const status=el('p','Checking live provider directory…');results.prepend(status);
       try {
         for(const term of people) {
-          const found=await providers(term,plans,signal);if(signal.aborted)return;
+          const found=await providers(term,plans,signal,providerSelections.find(p=>p.label===term));if(signal.aborted)return;
           for(const plan of plans) {
             const matches=found.matches.get(plan.id);
             comparisonState.coverage.push({plan:plan.name,kind:'Provider',term,matches,partial:found.truncated});
