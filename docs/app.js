@@ -23,6 +23,7 @@ function drugMatches(plan,term,formularies) {
     for(const row of rows.filter(r=>r.name.toLowerCase().includes(term.toLowerCase())).slice(0,5)) hits.push({
       name:row.name,detail:`Tier ${row.tier} · PDF page ${row.page}`,status:'Review required',
       restrictions:row.restrictions || '',
+      cost:plan.drug_costs?.tiers?.[row.tier] || null, cost_context:plan.drug_costs || {},
       source_url:doc.url+'#page='+row.page});
   }
   return hits;
@@ -34,6 +35,13 @@ function check(parent,kind,term,matches,message) {
     section.append(el('p',m.name+' · '+m.detail),el('span',m.status,'badge unverified'));
     if(m.restrictions) section.append(el('p',m.restrictions));
     if(kind==='Medication') {
+      if(m.cost) {
+        section.append(el('p',`Plan-listed Tier ${m.detail.match(/Tier (\d+)/)?.[1] || ''} ${m.cost.type}: ${m.cost.display}`));
+        section.append(el('small','30-day supply · network retail pharmacy · initial coverage · standard schedule without Extra Help'));
+        section.append(el('p',m.cost_context.conditions,'metadata'));
+        section.append(el('p',m.cost_context.deductible_note,'metadata'));
+        link(section,'Check plan cost-sharing rules',m.cost.source_url);
+      } else section.append(el('p','Copay unverified — review plan cost-sharing rules.','metadata'));
       const note=el('p');
       link(note,'check the official formulary',m.source_url);section.append(note);
     } else link(section,'Source record',m.source_url);
@@ -81,6 +89,7 @@ function exportComparison(ranked,weights) {
   const intake=[['Field','Value'],['Candidate name (complete offline)',''],['Additional notes (complete offline)',''],
     ['Export generated',new Date().toISOString()],['Plan data snapshot',s.snapshot],['Plan year','2027'],
     ['ZIP',s.zip],['County',s.county],['State','NC'],['Carrier','Devoted Health'],['Line of business','Medicare Advantage'],
+    ['Drug cost assumptions','30-day supply; network retail pharmacy; initial coverage; standard schedule without Extra Help. Exact coverage, pharmacy participation, price, and deductible completion are not verified.'],
     ['Medications entered',s.drugs.join('\n') || 'None'],['Providers entered',s.people.join('\n') || 'None'],
     ['Dental priority',priorityLabel(weights.dental)],['OTC priority',priorityLabel(weights.otc)],['Lower premium priority',priorityLabel(weights.premium)],
     ['Medical maximum priority',priorityLabel(weights.moop)],['Specialist priority',priorityLabel(weights.specialist)],['Hospital priority',priorityLabel(weights.hospital)],['Vision priority',priorityLabel(weights.vision)],['Hearing priority',priorityLabel(weights.hearing)],
@@ -99,10 +108,11 @@ function exportComparison(ranked,weights) {
       s.people.length?(s.providerStatus.get(p.id) || 'Pending — directory lookup not complete'):'Not assessed',
       p.special_needs?'Special-needs eligibility must be confirmed':'Confirm enrollment eligibility',doc('benefits'),doc('evidence'),doc('formulary'),'','']);
   }
-  const coverage=[['Plan','Check','Entered value','Candidate match','Office or drug detail','Review status','Restrictions / conditions','Source']];
+  const coverage=[['Plan','Check','Entered value','Candidate match','Office or drug detail','Review status','Restrictions / conditions','Source','Plan-listed tier cost','Cost assumptions','Cost source','Deductible conditions']];
   for(const c of s.coverage){
     if(!c.matches.length)coverage.push([c.plan,c.kind,c.term,'','',c.partial?'Incomplete search — unverified':'No match — unverified','','']);
-    for(const m of c.matches)coverage.push([c.plan,c.kind,c.term,m.name,m.detail,c.partial?'Partial search — review required':m.status,m.restrictions || 'Restrictions unverified — check the official formulary',m.source_url]);
+    for(const m of c.matches)coverage.push([c.plan,c.kind,c.term,m.name,m.detail,c.partial?'Partial search — review required':m.status,m.restrictions || 'Check the official formulary for restrictions.',m.source_url,m.cost?.display || (c.kind==='Medication'?'Unverified':'Not applicable'),
+      m.cost?'30-day network retail; initial coverage; without Extra Help. '+m.cost_context.conditions:'',m.cost?.source_url || '',m.cost_context?.deductible_note || '']);
   }
   for(const p of s.plans)for(const term of s.people)if(!s.coverage.some(c=>c.plan===p.name && c.kind==='Provider' && c.term===term))coverage.push([p.name,'Provider',term,'','','Lookup pending or unavailable — unverified','','']);
   const a=el('a');const url=URL.createObjectURL(workbook([{name:'Intake and priorities',rows:intake},{name:'Plan comparison',rows},{name:'Coverage review',rows:coverage}]));

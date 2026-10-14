@@ -6,6 +6,7 @@ import app
 import devoted
 import service_data
 from benefit_data import parse_benefits
+from drug_costs import parse_drug_costs
 
 OUT=Path(__file__).resolve().parent/'docs'/'data'
 
@@ -49,7 +50,8 @@ def export():
                 'year':2027,'business':'Medicare Advantage','state':'NC','counties':areas[locator],
                 'premium':premium or 'unverified','benefit_metrics':metrics,
                 'special_needs':bool(re.search(r'C-SNP|D-SNP',p['name'])),
-                'ma_only':'MA ONLY' in p['name'], 'documents':docs,'network':p.get('network',[]),
+                'ma_only':'MA ONLY' in p['name'],
+                'drug_costs':parse_drug_costs(sb['text'],sb['url']) if sb else {}, 'documents':docs,'network':p.get('network',[]),
                 'source_url':devoted.BASE+'InsurancePlan/'+p['id'],
                 'verified_on':p.get('meta',{}).get('lastUpdated','')[:10]})
         if len(plans)!=len(areas):raise ValueError('Some service-area plans lack API records')
