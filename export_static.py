@@ -5,6 +5,7 @@ from pathlib import Path
 import app
 import devoted
 import service_data
+from benefit_data import parse_benefits
 
 OUT=Path(__file__).resolve().parent/'docs'/'data'
 
@@ -42,9 +43,13 @@ def export():
             locator=next((i for i in ids if i in areas),None)
             if not locator:continue
             docs,premium,_,_=service_data.documents(locator,[])
+            sb=db.execute("SELECT d.text,d.url FROM devoted_document_links l JOIN devoted_documents d ON d.url=l.url WHERE l.locator=? AND l.kind='benefits'",(locator,)).fetchone()
+            metrics=parse_benefits(sb['text'],sb['url']) if sb else {}
             plans.append({'id':p['id'],'locator':locator,'name':p['name'],'carrier':'Devoted Health',
                 'year':2027,'business':'Medicare Advantage','state':'NC','counties':areas[locator],
-                'premium':premium or 'unverified','documents':docs,'network':p.get('network',[]),
+                'premium':premium or 'unverified','benefit_metrics':metrics,
+                'special_needs':bool(re.search(r'C-SNP|D-SNP',p['name'])),
+                'ma_only':'MA ONLY' in p['name'], 'documents':docs,'network':p.get('network',[]),
                 'source_url':devoted.BASE+'InsurancePlan/'+p['id'],
                 'verified_on':p.get('meta',{}).get('lastUpdated','')[:10]})
         if len(plans)!=len(areas):raise ValueError('Some service-area plans lack API records')

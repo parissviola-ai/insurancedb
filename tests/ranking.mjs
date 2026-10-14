@@ -1,0 +1,12 @@
+import assert from 'node:assert/strict';
+import {rankPlans} from '../docs/ranking.js';
+const p=(id,dental,otc,premium,extra={})=>({id,name:id,benefit_metrics:{dental:{amount:dental},otc:{amount:otc},premium:{amount:premium}},...extra});
+const plans=[p('Dental',4000,20,30),p('OTC',1000,150,0),p('Missing',5000,undefined,0),p('SNP',9000,300,0,{special_needs:true})];
+assert.equal(rankPlans(plans,{dental:5,otc:0,premium:0})[0].plan.id,'Missing');
+assert.equal(rankPlans(plans,{dental:0,otc:5,premium:0})[0].plan.id,'OTC');
+assert.equal(rankPlans(plans,{dental:1,otc:1,premium:1}).find(r=>r.plan.id==='Missing').score,null);
+assert.equal(rankPlans(plans,{dental:1,otc:1,premium:1}).find(r=>r.plan.id==='SNP').score,null);
+assert(rankPlans(plans,{dental:0,otc:0,premium:0}).every(r=>r.score===null));
+assert.equal(rankPlans([p('MA',2000,50,0,{ma_only:true})],{dental:1},true)[0].score,null);
+assert.equal(rankPlans([p('Tie1',1000,50,0),p('Tie2',1000,50,0)],{dental:1,otc:1,premium:1})[0].score,100);
+console.log('Ranking checks passed: priorities, missing data, eligibility, Part D, all-zero weights, ties.');

@@ -1,4 +1,5 @@
 import {providers} from './provider.js';
+import {rankPlans} from './ranking.js';
 const form=document.querySelector('#search'); const results=document.querySelector('#results');
 const state=document.querySelector('#state');state.append(new Option('North Carolina','NC'));
 const business=form.elements.business;business.replaceChildren(new Option('Medicare Advantage','Medicare Advantage'));
@@ -38,9 +39,41 @@ function check(parent,kind,term,matches,message) {
   }
   parent.append(section);
 }
+let comparisonState=null;
+const money=value=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:0}).format(value);
+function renderComparison() {
+  if(!comparisonState)return;
+  const {container,plans,drugs,people,providerStatus}=comparisonState;
+  const weights={};for(const key of ['dental','otc','premium'])weights[key]=Number(form.elements['weight_'+key].value);
+  const ranked=rankPlans(plans,weights,drugs.length>0);
+  container.replaceChildren(el('h2','Compare plans'));
+  const best=ranked.filter(r=>r.score!==null && Math.abs(r.score-ranked[0].score)<0.0001);
+  if(best.length)container.append(el('p',`Top benefit match${best.length>1?'es (tie)':''}: ${best.map(r=>r.plan.name).join('; ')}. Based only on your selected benefit priorities.`,'recommendation'));
+  else container.append(el('p','No ranking available. Select priorities or review missing benefit amounts.'));
+  container.append(el('p','Scores compare available dollar allowances and plan premiums within these results. Dental reimbursement rules differ. Medication, provider, and eligibility checks must be completed before choosing a plan. Missing amounts are unverified, never treated as $0.'));
+  const wrap=el('div',undefined,'comparison-scroll');const table=el('table');table.append(el('caption','2027 plans for your selected county'));
+  const head=el('tr');for(const name of ['Plan','Benefit match','Monthly premium','Dental / year','OTC','Medications','Providers','Details']){const th=el('th',name);th.scope='col';head.append(th);}const thead=el('thead');thead.append(head);table.append(thead);
+  const body=el('tbody');
+  for(const {plan,score,reason} of ranked){
+    const row=el('tr');if(score!==null && best.some(r=>r.plan.id===plan.id))row.className='top-match';
+    const name=el('th',plan.name);name.scope='row';row.append(name,el('td',score===null?reason:`${Math.round(score)} / 100`));
+    for(const key of ['premium','dental','otc']){
+      const cell=el('td');const metric=plan.benefit_metrics?.[key];
+      if(metric){link(cell,money(metric.amount)+(key==='otc'?' / quarter':''),metric.source_url);if(key==='otc')cell.append(el('small',money(metric.amount*4)+' annual equivalent'));if(key==='dental')cell.append(el('small',metric.notes));}
+      else cell.append(el('span','Unverified'));
+      row.append(cell);
+    }
+    row.append(el('td',drugs.length?(plan.ma_only?'MA only — separate drug plan required':'Formulary matches require review'):'Not assessed'));
+    row.append(el('td',people.length?(providerStatus.get(plan.id) || 'Checking directory…'):'Not assessed'));
+    const detail=el('td');const a=el('a','View details');a.href='#plan-'+plan.id;a.addEventListener('click',()=>{const d=document.querySelector('#plan-'+plan.id);if(d)d.open=true;});detail.append(a);row.append(detail);body.append(row);
+  }
+  table.append(body);wrap.append(table);container.append(wrap);
+  container.append(el('small','Score: weighted, relative benefit amounts. Higher dental/OTC allowances and lower premium score higher; equal values tie. Only plans with amounts for every selected priority are scored. Special-needs plans are not ranked; compare them manually after confirming eligibility.'));
+}
+for(const key of ['dental','otc','premium'])form.elements['weight_'+key].addEventListener('input',()=>{document.querySelector('#'+key+'-value').value=form.elements['weight_'+key].value;renderComparison();});
 form.elements.zip.addEventListener('input',()=>county.replaceChildren(new Option('Choose after ZIP lookup','')));
 form.addEventListener('submit',async event=>{
-  event.preventDefault();if(request)request.abort();request=new AbortController();const signal=request.signal;
+  event.preventDefault();comparisonState=null;if(request)request.abort();request=new AbortController();const signal=request.signal;
   const zip=form.elements.zip.value.trim();const chosen=county.value;
   const drugs=terms(form.elements.medication.value),people=terms(form.elements.provider.value);
   results.setAttribute('aria-busy','true');results.replaceChildren(el('p','Searching…'));
@@ -56,9 +89,11 @@ form.addEventListener('submit',async event=>{
       results.replaceChildren(el('h2','Choose your location'),el('p',counties.length?'This ZIP crosses county boundaries. Select your county, then search again.':'This ZIP is not in the prepared NC lookup. No plan availability inferred.'));
       if(counties.length)county.focus();return;
     }
-    const plans=inventory.plans.filter(p=>p.counties.includes(selected.code));
+    const plans=inventory.plans.filter(p=>p.counties.includes(selected.code) && (form.elements.special_needs.checked || !p.special_needs));
     results.replaceChildren(el('h2',`${plans.length} plans · ${selected.name} County`),el('p',`Official 2027 county mapping. Data refreshed ${inventory.snapshot.retrieved_at.slice(0,10)}. Confirm eligibility and enrollment requirements.`));
     if(!plans.length)results.append(el('p','Devoted’s published mapping lists no 2027 plans for this county.'));
+    const comparison=el('section',undefined,'panel');results.append(comparison);
+    comparisonState={container:comparison,plans,drugs,people,providerStatus:new Map()};renderComparison();
     const sections=new Map();
     for(const plan of plans) {
       const card=el('article',undefined,'plan');card.append(el('span',plan.business,'badge'),el('h3',plan.name),
@@ -68,19 +103,27 @@ form.addEventListener('submit',async event=>{
       for(const drug of drugs)check(card,'Medication',drug,drugMatches(plan,drug,formularies));
       const providerSection=el('div');card.append(providerSection);sections.set(plan.id,providerSection);
       link(card,'Official provider search',`https://www.devoted.com/search-providers/#filterType=all&p=${encodeURIComponent(plan.name.includes('(PPO')?'PPO':'HMO')}&q=&s=NC&y=2027`);
-      results.append(card);
+      const details=el('details');details.id='plan-'+plan.id;details.append(el('summary',plan.name+' · Plan details'),card);results.append(details);
     }
     if(people.length && plans.length) {
       const status=el('p','Checking live provider directory…');results.prepend(status);
       try {
         for(const term of people) {
           const found=await providers(term,plans,signal);if(signal.aborted)return;
-          for(const plan of plans)check(sections.get(plan.id),'Provider',term,found.matches.get(plan.id),found.truncated?'Unverified — search incomplete; use the official directory.':undefined);
+          for(const plan of plans) {
+            const matches=found.matches.get(plan.id);
+            check(sections.get(plan.id),'Provider',term,matches,found.truncated?'Unverified — search incomplete; use the official directory.':undefined);
+            const previous=comparisonState.providerStatus.get(plan.id);
+            const uncertain=found.truncated || !matches.length || previous?.includes('Unverified');
+            comparisonState.providerStatus.set(plan.id,uncertain?'Unverified — review directory':'Matches found — verify all offices');
+          }
+          renderComparison();
           if(found.truncated)results.append(el('p','Provider search was limited. Missing matches remain unverified; search by NPI or full name.'));
         }
         status.textContent='Live provider lookup complete. Confirm the exact office and current participation.';
       } catch(e) {
         if(signal.aborted)return;
+        for(const plan of plans)comparisonState.providerStatus.set(plan.id,'Directory unavailable — unverified');renderComparison();
         status.textContent='Live provider lookup unavailable. Use the official provider search links; no coverage inferred.';
       }
     }
