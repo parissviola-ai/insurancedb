@@ -34,7 +34,7 @@ async function fhirSearch(type, params, signal, maxPages=2) {
 function personQuery(term) {
   const words=term.trim().split(/\s+/); const query={_count:'10'};
   if(/^\d{10}$/.test(term)) query.identifier='http://hl7.org/fhir/sid/us-npi|'+term;
-  else if(words.length>1) {query.given=words[0];query.family=words[words.length-1];}
+  else if(words.length>1) {query.given=words[0];query.family=words.slice(1).join(' ');}
   else query.name=term;
   return query;
 }
@@ -72,7 +72,12 @@ export async function providers(term, plans, signal, selection=null) {
 export async function providerSuggestions(term,signal,state='NC') {
   const query={...personQuery(term),_count:'5'};
   if(!/^\d{10}$/.test(term))query['_has:PractitionerRole:practitioner:location.address-state']=state;
-  const people=await fhirSearch('Practitioner',query,signal,1);
+  let people=await fhirSearch('Practitioner',query,signal,1);
+  const words=term.trim().split(/\s+/);
+  if(!people.rows.length && words.length>2){
+    const alternate={...query,family:words.slice(-1)[0],given:words[0]};
+    people=await fhirSearch('Practitioner',alternate,signal,1);
+  }
   const options=[],seen=new Set();let truncated=people.truncated;
   for(const person of people.rows.slice(0,5)) {
     const roles=await fhirSearch('PractitionerRole',{practitioner:'Practitioner/'+person.id,_count:'100'},signal);

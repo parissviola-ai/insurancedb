@@ -1,4 +1,4 @@
-import {providers} from './provider.js?v=directory-retry';
+import {providers} from './provider.js?v=compound-names';
 import {rankPlans,priorityKeys} from './ranking.js';
 import {workbook} from './excel.js';
 import {medicationPicker} from './medications.js';
