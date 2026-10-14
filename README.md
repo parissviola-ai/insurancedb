@@ -42,3 +42,13 @@ node --check static/app.js
 ```
 
 Tests use isolated temporary fixtures; those records never populate the application database.
+
+## Live Devoted connection
+
+Select “Live Devoted API · North Carolina” in the dashboard. The server queries the official public FHIR API at `https://fhir.devoted.com/fhir/`, using TLS verification and a five-minute in-memory response cache. No authentication was needed for tested public resources. API errors display as errors rather than empty successful coverage results.
+
+The connector follows pagination, restricts remote requests to the official FHIR host, and selects active plans explicitly spanning the requested year with NC in their official names. These are state candidates: ZIP/county plan service areas and benefits are not established by these resources. ZIP filters provider office locations only. County inputs do not filter live plan candidates.
+
+Provider searches use Practitioner → PractitionerRole → Location and match the role's explicit network reference against the selected plan's network, with active status and applicable period required. Results are limited to NC locations and the entered office ZIP. Exact identity and current participation still need confirmation. Search up to three provider names at a time; office details should be checked in results rather than appended to the name query. Facility and pharmacy organization searches are not yet implemented. Truncated searches are labeled; missing records remain unverified.
+
+Formulary List and MedicationKnowledge resources exist, but inspected NC lists lack an explicit coverage year and do not establish the connection to all current 2027 plan IDs. Medication coverage therefore remains unverified. Do not use lastUpdated as evidence of a formulary's plan year. No live records are committed to Git or inserted into the local SQLite database by the connector.

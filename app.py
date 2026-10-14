@@ -2,6 +2,7 @@
 import argparse
 import json
 import sqlite3
+import devoted
 from datetime import date
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -103,9 +104,15 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         parsed = urlparse(self.path)
-        if parsed.path == '/api/plans':
+        if parsed.path in ('/api/plans', '/api/devoted'):
             params = {k:v[0] for k,v in parse_qs(parsed.query).items()}
-            self.respond(json.dumps(search(params)).encode(), 'application/json')
+            try:
+                data = devoted.lookup(params) if parsed.path == '/api/devoted' else search(params)
+                self.respond(json.dumps(data).encode(), 'application/json')
+            except ValueError as error:
+                self.respond(json.dumps({'error':str(error)}).encode(), 'application/json', 400)
+            except Exception:
+                self.respond(json.dumps({'error':'Devoted lookup unavailable. No coverage inferred; please retry.'}).encode(), 'application/json', 502)
         elif parsed.path in ('/', '/app.js', '/style.css'):
             name = {'/':'index.html','/app.js':'app.js','/style.css':'style.css'}[parsed.path]
             mime = {'/':'text/html','/app.js':'text/javascript','/style.css':'text/css'}[parsed.path]
@@ -113,8 +120,8 @@ class Handler(BaseHTTPRequestHandler):
         else:
             self.send_error(404)
 
-    def respond(self, body, mime):
-        self.send_response(200)
+    def respond(self, body, mime, status=200):
+        self.send_response(status)
         self.send_header('Content-Type', mime + '; charset=utf-8')
         self.send_header('Content-Length', str(len(body)))
         self.send_header('Cache-Control','no-store')

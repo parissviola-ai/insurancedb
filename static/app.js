@@ -26,9 +26,10 @@ form.addEventListener('submit', async event => {
   }
   results.setAttribute('aria-busy','true'); results.replaceChildren(element('p','Searching…'));
   try {
-    const response = await fetch('/api/plans?' + params, {signal});
-    if (!response.ok) throw new Error('Request failed');
+    const endpoint = params.get('source') === 'devoted' ? '/api/devoted' : '/api/plans';
+    const response = await fetch(endpoint + '?' + params, {signal});
     const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'Search failed. Please retry.');
     results.replaceChildren(element('h2', `${data.plans.length} plan results`), element('p',data.notice));
     if (!data.plans.length) results.append(element('p','No imported plans match this location and filters. This does not establish that no plans are available.'));
     if (data.truncated) results.append(element('p','Showing the first 200 results. Narrow your filters.'));
@@ -55,6 +56,6 @@ form.addEventListener('submit', async event => {
       results.append(card);
     }
   } catch (error) {
-    if (error.name !== 'AbortError') results.replaceChildren(element('p','Search failed. Please retry.'));
+    if (error.name !== 'AbortError') results.replaceChildren(element('p',error.message || 'Search failed. Please retry.'));
   } finally { if (!signal.aborted) results.setAttribute('aria-busy','false'); }
 });
