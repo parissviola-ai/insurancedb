@@ -49,4 +49,11 @@ def parse_benefits(text, url):
                 full=re.search(r'Inpatient Hospital[\s\S]{0,200}?\$([\d,]+) copay per day',text)
                 cost=float(daily.group(1).replace(',',''))*min(n,7)
                 add('hospital',full,'Modeled in-network 7-day admission: $'+daily.group(1)+' per day for days 1–'+str(n)+', then $0. Actual cost depends on stay length; authorization and benefit-period rules apply.','7-day stay',cost)
+    transport=re.search(r'Transportation\s+Not covered',text)
+    if transport:
+        add('transportation',transport,'Plan transportation benefit is listed as not covered. Other transportation programs may have separate eligibility.','one-way rides/year',0)
+    else:
+        rides=re.search(r'Transportation[\s\S]{0,250}?\b(\d+) one-way (?:trips|rides)[\s\S]{0,80}?(?:per year|each year)',text,re.I)
+        if rides and re.search(r'\$0 copay',rides.group(0)):
+            add('transportation',rides,'Covered one-way rides per year. Round trips use two rides. Check destination, mileage, vendor, and advance-booking rules.','one-way rides/year')
     return result

@@ -31,3 +31,13 @@ class BenefitTests(unittest.TestCase):
     def test_hospital_unsupported_schedule_stays_unknown(self):
         m=parse_benefits('Inpatient Hospital Days 1 - 6 $385 copay per day Day 7+ 20% coinsurance','https://example.org/sb.pdf')
         self.assertNotIn('hospital',m)
+
+    def test_transportation_not_covered_is_explicit_zero(self):
+        m=parse_benefits('Transportation Not covered','https://example.org/sb.pdf')
+        self.assertEqual(m['transportation']['amount'],0)
+        self.assertNotIn('transportation',parse_benefits('Transportation rules not supplied','https://example.org/sb.pdf'))
+
+    def test_free_one_way_rides_preserve_units(self):
+        m=parse_benefits('Transportation $0 copay for 24 one-way trips per year','https://example.org/sb.pdf')
+        self.assertEqual(m['transportation']['amount'],24)
+        self.assertEqual(m['transportation']['period'],'one-way rides/year')

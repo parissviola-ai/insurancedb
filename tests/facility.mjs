@@ -1,0 +1,11 @@
+import assert from 'node:assert/strict';
+import {providers} from '../docs/provider.js';
+const base='https://fhir.devoted.com/fhir/';
+globalThis.fetch=async url=>{let data;const p=String(url).slice(base.length);if(p==='Organization/facility')data={resourceType:'Organization',name:'Test facility'};else if(p==='Location/selected')data={resourceType:'Location',address:{state:'NC',text:'Selected address'},telecom:[{system:'phone',value:'555-0100'}]};else if(p.startsWith('OrganizationAffiliation?'))data={resourceType:'Bundle',entry:[{resource:{id:'affiliation',active:true,period:{start:'2027-01-01',end:'2027-12-31'},location:[{reference:'Location/selected'}],network:[{reference:'Organization/network'}]}}]};else throw Error('Unexpected URL');return {ok:true,json:async()=>data};};
+const plans=[{id:'match',network:[{reference:'Organization/network'}]},{id:'wrong',network:[{reference:'Organization/wrong'}]}];
+const selection={kind:'facility',orgId:'facility',locationId:'selected',manual:false};
+const r=await providers('Test',plans,new AbortController().signal,selection);
+assert.equal(r.matches.get('match').length,1);assert(r.matches.get('match')[0].detail.includes('555-0100'));assert.equal(r.matches.get('wrong').length,0);
+const different=await providers('Test',plans,new AbortController().signal,{...selection,locationId:'other'});assert.equal(different.matches.get('match').length,0);
+const manual=await providers('Test',plans,new AbortController().signal,{kind:'facility',manual:true});assert.equal(manual.matches.get('match').length,0);
+console.log('Facility network, exact location, contact information and manual uncertainty passed');

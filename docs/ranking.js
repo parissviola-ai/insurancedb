@@ -1,4 +1,4 @@
-export const priorityKeys=['dental','otc','premium','moop','specialist','hospital','vision','hearing'];
+export const priorityKeys=['dental','otc','premium','moop','specialist','hospital','vision','hearing','transportation'];
 export const lowerIsBetter=new Set(['premium','moop','specialist','hospital','hearing']);
 /* Relative scores compare dollar allowances only; they do not establish coverage. */
 export function rankPlans(plans, weights, needsDrugs=false) {

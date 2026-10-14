@@ -14,3 +14,6 @@ const medical=[{id:'Low',name:'Low',benefit_metrics:{moop:{amount:4000},speciali
 for(const k of ['moop','specialist','hospital','hearing'])assert.equal(rankPlans(medical,{[k]:5})[0].plan.id,'Low');
 assert.equal(rankPlans(medical,{vision:5})[0].plan.id,'High');
 console.log('Additional priority directions passed.');
+const rides=[{id:'Few',name:'Few',benefit_metrics:{transportation:{amount:12}}},{id:'Many',name:'Many',benefit_metrics:{transportation:{amount:24}}}];
+assert.equal(rankPlans(rides,{transportation:5})[0].plan.id,'Many');
+console.log('Transportation ride-count ranking passed');
