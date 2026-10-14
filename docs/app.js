@@ -34,7 +34,7 @@ function check(parent,kind,term,matches,message) {
     section.append(el('p',m.name+' · '+m.detail),el('span',m.status,'badge unverified'));
     if(m.restrictions) section.append(el('p',m.restrictions));
     if(kind==='Medication') {
-      const note=el('p','Restrictions unverified — ');
+      const note=el('p');
       link(note,'check the official formulary',m.source_url);section.append(note);
     } else link(section,'Source record',m.source_url);
   }
