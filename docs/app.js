@@ -1,5 +1,6 @@
 import {providers} from './provider.js';
 import {rankPlans} from './ranking.js';
+import {workbook} from './excel.js';
 const form=document.querySelector('#search'); const results=document.querySelector('#results');
 const state=document.querySelector('#state');state.append(new Option('North Carolina','NC'));
 const business=form.elements.business;business.replaceChildren(new Option('Medicare Advantage','Medicare Advantage'));
@@ -68,7 +69,41 @@ function renderComparison() {
     const detail=el('td');const a=el('a','View details');a.href='#plan-'+plan.id;a.addEventListener('click',()=>{const d=document.querySelector('#plan-'+plan.id);if(d)d.open=true;});detail.append(a);row.append(detail);body.append(row);
   }
   table.append(body);wrap.append(table);container.append(wrap);
+  const exportButton=el('button','Export comparison to Excel');exportButton.type='button';
+  exportButton.disabled=!plans.length;
+  exportButton.addEventListener('click',()=>exportComparison(ranked,weights));container.append(exportButton);
+  container.append(el('p','Export contains the current search and priorities. Add the candidate name, notes, and reviewer decision in Excel after downloading.','metadata'));
   container.append(el('small','Score: weighted, relative benefit amounts. Higher dental/OTC allowances and lower premium score higher; equal values tie. Only plans with amounts for every selected priority are scored. Special-needs plans are not ranked; compare them manually after confirming eligibility.'));
+}
+function exportComparison(ranked,weights) {
+  const s=comparisonState;
+  const intake=[['Field','Value'],['Candidate name (complete offline)',''],['Additional notes (complete offline)',''],
+    ['Reviewer name (complete offline)',''],['Reviewer decision (complete offline)',''],
+    ['Export generated',new Date().toISOString()],['Plan data snapshot',s.snapshot],['Plan year','2027'],
+    ['ZIP',s.zip],['County',s.county],['State','NC'],['Carrier','Devoted Health'],['Line of business','Medicare Advantage'],
+    ['Medications entered',s.drugs.join('\n') || 'None'],['Providers entered',s.people.join('\n') || 'None'],
+    ['Dental priority (0–5)',weights.dental],['OTC priority (0–5)',weights.otc],['Lower premium priority (0–5)',weights.premium],
+    ['Special-needs plans included',s.includeSpecial?'Yes — eligibility must be confirmed':'No'],
+    ['Ranking scope','Benefit amounts and plan premium only. Medication/provider coverage and eligibility require separate review.'],
+    ['Missing data','Unverified, never treated as zero. OTC annual equivalent assumes four quarters, not rollover.'],
+    ['Privacy','Generated locally. Candidate name and notes are blank and entered only in the downloaded workbook.']];
+  const rows=[['Plan','Plan ID','Benefit match / 100','Ranking status','Monthly premium','Dental / year','Dental conditions','OTC / quarter','OTC annual equivalent','Medication review','Provider review','Eligibility','Summary of Benefits','Evidence of Coverage','Formulary','Reviewer choice (offline)','Reviewer notes (offline)']];
+  for(const r of ranked){const p=r.plan,m=p.benefit_metrics || {},doc=kind=>p.documents.find(d=>d.kind===kind)?.url || 'Not available';
+    rows.push([p.name,p.locator,r.score===null?'Unranked':Math.round(r.score),r.score===null?r.reason:'Relative benefit match only',
+      m.premium?money(m.premium.amount):'Unverified',m.dental?money(m.dental.amount):'Unverified',m.dental?.notes || 'Unverified',
+      m.otc?money(m.otc.amount):'Unverified',m.otc?money(m.otc.amount*4):'Unverified',
+      s.drugs.length?(p.ma_only?'Separate Part D needed':'Unverified — check exact drugs and restrictions'):'Not assessed',
+      s.people.length?(s.providerStatus.get(p.id) || 'Pending — directory lookup not complete'):'Not assessed',
+      p.special_needs?'Special-needs eligibility must be confirmed':'Confirm enrollment eligibility',doc('benefits'),doc('evidence'),doc('formulary'),'','']);
+  }
+  const coverage=[['Plan','Check','Entered value','Candidate match','Office or drug detail','Review status','Restrictions / conditions','Source']];
+  for(const c of s.coverage){
+    if(!c.matches.length)coverage.push([c.plan,c.kind,c.term,'','',c.partial?'Incomplete search — unverified':'No match — unverified','','']);
+    for(const m of c.matches)coverage.push([c.plan,c.kind,c.term,m.name,m.detail,c.partial?'Partial search — review required':m.status,m.restrictions || 'Restrictions unverified — check the official formulary',m.source_url]);
+  }
+  for(const p of s.plans)for(const term of s.people)if(!s.coverage.some(c=>c.plan===p.name && c.kind==='Provider' && c.term===term))coverage.push([p.name,'Provider',term,'','','Lookup pending or unavailable — unverified','','']);
+  const a=el('a');const url=URL.createObjectURL(workbook([{name:'Intake and priorities',rows:intake},{name:'Plan comparison',rows},{name:'Coverage review',rows:coverage}]));
+  a.href=url;a.download=`plan-comparison-2027-${s.zip}.xlsx`;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
 for(const key of ['dental','otc','premium'])form.elements['weight_'+key].addEventListener('input',()=>{document.querySelector('#'+key+'-value').value=form.elements['weight_'+key].value;renderComparison();});
 form.elements.zip.addEventListener('input',()=>county.replaceChildren(new Option('Choose after ZIP lookup','')));
@@ -93,14 +128,14 @@ form.addEventListener('submit',async event=>{
     results.replaceChildren(el('h2',`${plans.length} plans · ${selected.name} County`),el('p',`Official 2027 county mapping. Data refreshed ${inventory.snapshot.retrieved_at.slice(0,10)}. Confirm eligibility and enrollment requirements.`));
     if(!plans.length)results.append(el('p','Devoted’s published mapping lists no 2027 plans for this county.'));
     const comparison=el('section',undefined,'panel');results.append(comparison);
-    comparisonState={container:comparison,plans,drugs,people,providerStatus:new Map()};renderComparison();
+    comparisonState={container:comparison,plans,drugs,people,providerStatus:new Map(),coverage:[],zip,county:selected.name,snapshot:inventory.snapshot.retrieved_at,includeSpecial:form.elements.special_needs.checked};renderComparison();
     const sections=new Map();
     for(const plan of plans) {
       const card=el('article',undefined,'plan');card.append(el('span',plan.business,'badge'),el('h3',plan.name),
         el('p',`${plan.carrier} · ${plan.year} · ${selected.name}, NC · ZIP ${zip}`),el('p','Monthly premium: '+plan.premium));
       card.append(el('small','Premium extracted from the Summary of Benefits. Other costs and conditions apply.'));
       for(const doc of plan.documents) {const row=el('p');link(row,({benefits:'Summary of Benefits',evidence:'Evidence of Coverage',formulary:'2027 Drug List'})[doc.kind],doc.url);card.append(row);}
-      for(const drug of drugs)check(card,'Medication',drug,drugMatches(plan,drug,formularies));
+      for(const drug of drugs){const matches=drugMatches(plan,drug,formularies);check(card,'Medication',drug,matches);comparisonState.coverage.push({plan:plan.name,kind:'Medication',term:drug,matches});}
       const providerSection=el('div');card.append(providerSection);sections.set(plan.id,providerSection);
       link(card,'Official provider search',`https://www.devoted.com/search-providers/#filterType=all&p=${encodeURIComponent(plan.name.includes('(PPO')?'PPO':'HMO')}&q=&s=NC&y=2027`);
       const details=el('details');details.id='plan-'+plan.id;details.append(el('summary',plan.name+' · Plan details'),card);results.append(details);
@@ -112,6 +147,7 @@ form.addEventListener('submit',async event=>{
           const found=await providers(term,plans,signal);if(signal.aborted)return;
           for(const plan of plans) {
             const matches=found.matches.get(plan.id);
+            comparisonState.coverage.push({plan:plan.name,kind:'Provider',term,matches,partial:found.truncated});
             check(sections.get(plan.id),'Provider',term,matches,found.truncated?'Unverified — search incomplete; use the official directory.':undefined);
             const previous=comparisonState.providerStatus.get(plan.id);
             const uncertain=found.truncated || !matches.length || previous?.includes('Unverified');
