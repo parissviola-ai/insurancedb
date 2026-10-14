@@ -1,6 +1,7 @@
 import {providers} from './provider.js';
 import {rankPlans,priorityKeys} from './ranking.js';
 import {workbook} from './excel.js';
+import {medicationPicker} from './medications.js';
 const form=document.querySelector('#search'); const results=document.querySelector('#results');
 const state=document.querySelector('#state');state.append(new Option('North Carolina','NC'));
 const business=form.elements.business;business.replaceChildren(new Option('Medicare Advantage','Medicare Advantage'));
@@ -15,12 +16,14 @@ async function data() {
   })).catch(e=>{dataPromise=null;throw e;});
   return dataPromise;
 }
+const picker=medicationPicker(data);
 function terms(value) {return value.split('\n').map(s=>s.trim()).filter(Boolean);}
 function drugMatches(plan,term,formularies) {
   const hits=[];
   for(const doc of plan.documents.filter(d=>d.kind==='formulary')) {
     const rows=formularies[doc.url]?.rows || [];
-    for(const row of rows.filter(r=>r.name.toLowerCase().includes(term.toLowerCase())).slice(0,5)) hits.push({
+    const selection=comparisonState?.drugSelections.find(i=>i.label===term);
+    for(const row of rows.filter(r=>selection && !selection.manual ? r.name===selection.name : r.name.toLowerCase().includes((selection?.name || term).toLowerCase())).slice(0,5)) hits.push({
       name:row.name,detail:`Tier ${row.tier} · PDF page ${row.page}`,status:'Review required',
       restrictions:row.restrictions || '',
       cost:plan.drug_costs?.tiers?.[row.tier] || null, cost_context:plan.drug_costs || {},
@@ -148,9 +151,11 @@ form.elements.zip.addEventListener('input',updateCounty);
 form.addEventListener('submit',async event=>{
   event.preventDefault();comparisonState?.container.scrollObserver?.disconnect();comparisonState=null;if(request)request.abort();request=new AbortController();const signal=request.signal;
   const zip=form.elements.zip.value.trim();const chosen=county.value;
-  const drugs=terms(form.elements.medication.value),people=terms(form.elements.provider.value);
+  const drugSelections=picker.getSelections();
+  const drugs=drugSelections.map(i=>i.label),people=terms(form.elements.provider.value);
   results.setAttribute('aria-busy','true');results.replaceChildren(el('p','Searching…'));
   try {
+    if(picker.hasPending())throw new Error('Add the medication you typed, or clear the medication field before searching.');
     if(!/^\d{5}$/.test(zip))throw new Error('Enter a five-digit ZIP code.');
     if(people.length>3 || drugs.length>10)throw new Error('Search up to 3 providers and 10 medications at a time.');
     const [inventory,zipMap,formularies]=await data();if(signal.aborted)return;
@@ -166,7 +171,7 @@ form.addEventListener('submit',async event=>{
     results.replaceChildren(el('h2',`${plans.length} plans · ${selected.name} County`),el('p',`Official 2027 county mapping. Data refreshed ${inventory.snapshot.retrieved_at.slice(0,10)}. Confirm eligibility and enrollment requirements.`));
     if(!plans.length)results.append(el('p','Devoted’s published mapping lists no 2027 plans for this county.'));
     const comparison=el('section',undefined,'panel');results.append(comparison);
-    comparisonState={container:comparison,plans,drugs,people,providerStatus:new Map(),coverage:[],zip,county:selected.name,snapshot:inventory.snapshot.retrieved_at,includeSpecial:form.elements.special_needs.checked};renderComparison();
+    comparisonState={container:comparison,plans,drugs,drugSelections,people,providerStatus:new Map(),coverage:[],zip,county:selected.name,snapshot:inventory.snapshot.retrieved_at,includeSpecial:form.elements.special_needs.checked};renderComparison();
     const sections=new Map();
     for(const plan of plans) {
       const card=el('article',undefined,'plan');card.append(el('span',plan.business,'badge'),el('h3',plan.name),
