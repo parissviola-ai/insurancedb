@@ -1,4 +1,4 @@
-import {providerSuggestions,facilitySuggestions} from './provider.js?v=partial-surnames';
+import {providerSuggestions,facilitySuggestions} from './provider.js?v=surname-search-2';
 export function providerPicker(){
  const input=document.querySelector('#provider-search'),list=document.querySelector('#provider-suggestions'),selected=document.querySelector('#selected-providers'),message=document.querySelector('#provider-message');
  let items=[],options=[],active=-1,timer,request,revision=0;

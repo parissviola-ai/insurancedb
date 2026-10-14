@@ -33,3 +33,13 @@ class StaticDataTests(unittest.TestCase):
         county_states={c['code']:c['state'] for values in counties.values() for c in values}
         for p in plans:
             self.assertTrue(all(county_states[code]==p['state'] for code in p['counties']))
+
+    def test_directory_module_versions_are_consistent(self):
+        import re
+        root=DATA.parent
+        version=re.search(r'app\.js\?v=([^"\s]+)',(root/'index.html').read_text()).group(1)
+        app=(root/'app.js').read_text()
+        picker=(root/'provider-picker.js').read_text()
+        self.assertIn('provider-picker.js?v='+version,app)
+        self.assertIn('provider.js?v='+version,app)
+        self.assertIn('provider.js?v='+version,picker)
