@@ -1,4 +1,4 @@
-import {providers} from './provider.js?v=compound-names';
+import {providers} from './provider.js?v=partial-surnames';
 import {rankPlans,priorityKeys} from './ranking.js';
 import {workbook} from './excel.js';
 import {medicationPicker} from './medications.js';

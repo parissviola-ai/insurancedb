@@ -78,6 +78,11 @@ export async function providerSuggestions(term,signal,state='NC') {
     const alternate={...query,family:words.slice(i).join(' '),given:words[0]};
     people=await fhirSearch('Practitioner',alternate,signal,1);
   }
+  if(!people.rows.length && words.length>1){
+    const partial={...query,given:words[0]};delete partial.family;
+    partial['family:contains']=words[words.length-1];
+    people=await fhirSearch('Practitioner',partial,signal,1);
+  }
   const options=[],seen=new Set();let truncated=people.truncated;
   for(const person of people.rows.slice(0,5)) {
     const roles=await fhirSearch('PractitionerRole',{practitioner:'Practitioner/'+person.id,_count:'100'},signal);
