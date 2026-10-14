@@ -3,6 +3,7 @@ import argparse
 import json
 import sqlite3
 import devoted
+import service_data
 from datetime import date
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -104,10 +105,11 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         parsed = urlparse(self.path)
-        if parsed.path in ('/api/plans', '/api/devoted'):
+        if parsed.path in ('/api/plans', '/api/devoted', '/api/document'):
             params = {k:v[0] for k,v in parse_qs(parsed.query).items()}
             try:
-                data = devoted.lookup(params) if parsed.path == '/api/devoted' else search(params)
+                data = (service_data.document_text(params.get('url','')) if parsed.path == '/api/document' else
+                        devoted.lookup(params) if parsed.path == '/api/devoted' else search(params))
                 self.respond(json.dumps(data).encode(), 'application/json')
             except ValueError as error:
                 self.respond(json.dumps({'error':str(error)}).encode(), 'application/json', 400)

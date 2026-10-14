@@ -30,9 +30,17 @@ form.addEventListener('submit', async event => {
     const response = await fetch(endpoint + '?' + params, {signal});
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || 'Search failed. Please retry.');
+    if (data.counties) {
+      const county = document.querySelector('#county');
+      county.replaceChildren();
+      const placeholder = element('option','Select county'); placeholder.value = ''; county.append(placeholder);
+      for (const c of data.counties) { const o = element('option',c.name); o.value=c.code; county.append(o); }
+      county.value = data.selected_county || '';
+      if (data.needs_county) county.focus();
+    }
     results.replaceChildren(element('h2', `${data.plans.length} plan results`), element('p',data.notice));
-    if (!data.plans.length) results.append(element('p','No imported plans match this location and filters. This does not establish that no plans are available.'));
-    if (data.truncated) results.append(element('p','Showing the first 200 results. Narrow your filters.'));
+    if (!data.plans.length && !data.counties) results.append(element('p','No imported plans match this location and filters. This does not establish that no plans are available.'));
+    if (data.truncated) results.append(element('p','Some searches are incomplete or limited. Narrow your filters; missing matches remain unverified.'));
     for (const plan of data.plans) {
       const card = element('article',undefined,'plan');
       card.append(element('span',plan.business,'badge'),
@@ -40,6 +48,22 @@ form.addEventListener('submit', async event => {
         element('p',`Monthly premium: ${plan.premium || 'unverified'}`),
         element('p',plan.benefits || 'Benefits unverified'));
       source(card,plan.source_url,plan.verified_on);
+      if (plan.document_excerpt) card.append(element('small','Excerpt from the Summary of Benefits; consult the complete document for conditions.'));
+      for (const doc of plan.documents || []) {
+        const section = element('details');
+        section.append(element('summary', ({benefits:'Summary of Benefits',evidence:'Evidence of Coverage',formulary:'2027 Formulary'})[doc.kind]));
+        source(section,doc.url,doc.retrieved_at.slice(0,10));
+        const button = element('button','Read imported text'); button.type='button';
+        button.addEventListener('click',async () => {
+          button.disabled=true;
+          try {
+            const r = await fetch('/api/document?'+new URLSearchParams({url:doc.url}));
+            if (!r.ok) throw new Error('Document unavailable');
+            const d = await r.json(); section.append(element('pre',d.text,'document-text')); button.remove();
+          } catch(e) { button.disabled=false; button.textContent='Retry loading text'; }
+        });
+        section.append(button); card.append(section);
+      }
       for (const check of plan.checks) {
         const section = element('div',undefined,'check');
         section.append(element('strong',`${check.kind === 'medication' ? 'Medication' : 'Provider'}: ${check.query}`));
@@ -50,7 +74,7 @@ form.addEventListener('submit', async event => {
             element('p',match.restrictions || 'No restrictions recorded; confirm with the source.'));
           source(section,match.source_url,match.verified_on);
         }
-        section.append(element('small','Confirm the exact medication strength/form or provider office.'));
+        section.append(element('small',check.kind === 'medication' ? 'Up to five text excerpts shown; these may include index entries. Read the original formulary to confirm coverage.' : 'Confirm the exact provider identity and office.'));
         card.append(section);
       }
       results.append(card);
@@ -59,3 +83,5 @@ form.addEventListener('submit', async event => {
     if (error.name !== 'AbortError') results.replaceChildren(element('p',error.message || 'Search failed. Please retry.'));
   } finally { if (!signal.aborted) results.setAttribute('aria-busy','false'); }
 });
+
+form.elements.zip.addEventListener('input', () => { document.querySelector('#county').replaceChildren(element('option','Choose after ZIP lookup')); form.elements.county.firstChild.value=''; });

@@ -3,6 +3,7 @@ import json
 import re
 import time
 import threading
+import service_data
 from urllib.parse import urlencode, urlparse
 from urllib.request import Request, urlopen
 from datetime import datetime, timezone
@@ -99,10 +100,17 @@ def lookup(params):
         return {'plans':[], 'notice':'Live Devoted integration currently supports North Carolina only.', 'truncated':False}
     year = int(params.get('year','2027'))
     zip_code = params.get('zip','')
-    if zip_code and not re.fullmatch(r'\d{5}',zip_code):
+    if not re.fullmatch(r'\d{5}',zip_code):
         raise ValueError('Enter a five-digit ZIP code')
     if params.get('business') not in ('',None,'Medicare Advantage') or params.get('carrier','').lower() not in ('','devoted','devoted health'):
         return {'plans':[], 'notice':'Live Devoted connector covers Medicare Advantage only.', 'truncated':False}
+    counties, selected, locators, sync = service_data.area(zip_code,params.get('county',''),year)
+    if not selected:
+        return {'plans':[], 'counties':counties,'needs_county':len(counties)>1,'truncated':False,
+                'notice':'Select your county to see plans.' if counties else 'This ZIP was not found in Devoted’s published NC lookup. No plan availability inferred.'}
+    if not locators:
+        return {'plans':[], 'counties':counties,'selected_county':selected['code'],'truncated':False,
+                'notice':'Devoted’s published 2027 lookup lists no plans for '+selected['name']+' County.'}
     rows, truncated = search('InsurancePlan', {'name:contains':'NC','_count':100})
     output = []
     provider_cache = {}
@@ -114,19 +122,24 @@ def lookup(params):
         # Explicit state label in official plan name; not a ZIP service-area assertion.
         if not re.search(r'\bNC\b',p.get('name','')) or p.get('status')!='active' or not valid_year(p,year):
             continue
+        identifiers = [i.get('value','') for i in p.get('identifier',[]) if i.get('system')=='http://cms.gov/medicare/ma-plan-id']
+        locator = next((i+'-'+str(year) for i in identifiers if i+'-'+str(year) in locators),None)
+        if not locator:
+            continue
+        docs,premium,excerpt,checks = service_data.documents(locator,drug_terms)
         networks = {n['reference'] for n in p.get('network',[]) if 'reference' in n}
-        checks = [{'kind':'medication','query':t,'matches':[]} for t in drug_terms]
         for term in provider_terms:
             key = (term,tuple(sorted(networks)))
             if key not in provider_cache:
-                provider_cache[key] = provider_matches(term,networks,year,zip_code)
+                provider_cache[key] = provider_matches(term,networks,year,params.get('provider_zip',''))
             matches, more = provider_cache[key]
             truncated = truncated or more
             checks.append({'kind':'provider','query':term,'matches':matches})
         output.append({'id':p['id'],'carrier':'Devoted Health','name':p['name'],'year':year,'state':'NC',
-                       'county':'Service area unverified','zip':zip_code or 'not specified','business':'Medicare Advantage',
-                       'premium':'unverified','benefits':'ZIP/county availability, benefits, and 2027 medication coverage remain unverified. These are state plan candidates, not confirmed available plans.',
+                       'county':selected['name'],'zip':zip_code or 'not specified','business':'Medicare Advantage',
+                       'premium':premium or 'unverified', 'benefits':excerpt or 'Read the official benefit documents below. Structured benefits are not yet extracted.',
+                       'documents':docs, 'document_excerpt':bool(excerpt),
                        'source_url':BASE+'InsurancePlan/'+p['id'],
                        'verified_on':p.get('meta',{}).get('lastUpdated','')[:10], 'checks':checks})
-    return {'plans':output,'truncated':truncated,'notice':
-            'Live Devoted state plan candidates. ZIP filters provider offices only; it does not verify plan availability. County service-area filtering is not yet available. Medication matches remain unverified until a year-specific formulary link is established. Retrieved '+datetime.now(timezone.utc).isoformat(timespec='seconds')}
+    return {'plans':output,'counties':counties,'selected_county':selected['code'],'truncated':truncated,'notice':
+            'Plans matched to Devoted’s published '+str(year)+' county service areas. Formulary text matches need review; they do not confirm drug coverage. Provider offices may be outside your home ZIP. Website snapshot retrieved '+sync['retrieved_at']}
