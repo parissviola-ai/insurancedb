@@ -1,13 +1,13 @@
-import {providers} from './provider.js?v=wellcare-nc';
+import {providers} from './provider.js?v=wellcare-nc-full';
 import {rankPlans,priorityKeys} from './ranking.js';
 import {workbook} from './excel.js';
-import {medicationPicker} from './medications.js?v=wellcare-nc';
-import {providerPicker} from './provider-picker.js?v=wellcare-nc';
+import {medicationPicker} from './medications.js?v=wellcare-nc-full';
+import {providerPicker} from './provider-picker.js?v=wellcare-nc-full';
 const form=document.querySelector('#search'); const results=document.querySelector('#results');
 const state=document.querySelector('#state');state.append(new Option('Select state',''));for(const code of ['NC','SC','GA','FL','AL','TN','VA','KY','LA','TX','OH','PA','DE','MI','NY'])state.append(new Option(code,code));
 const business=form.elements.business;business.replaceChildren(new Option('Medicare Advantage','Medicare Advantage'));
-const carrier=form.elements.carrier;carrier.replaceChildren(new Option('Devoted Health','Devoted Health'),new Option('Wellcare — NC ZIP 28202 pilot','Wellcare'));
-carrier.addEventListener('change',()=>{request?.abort();comparisonState?.container.scrollObserver?.disconnect();comparisonState=null;results.replaceChildren(el('p','Carrier changed. Search again to compare plans.'));});
+const carrier=form.elements.carrier;carrier.replaceChildren(new Option('Devoted Health','Devoted Health'),new Option('Wellcare — North Carolina','Wellcare'));
+carrier.addEventListener('change',()=>{request?.abort();comparisonState?.container.scrollObserver?.disconnect();comparisonState=null;updateCounty(false);results.replaceChildren(el('p','Carrier changed. Search again to compare plans.'));});
 const county=form.elements.county;
 function el(tag,text,cls) {const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n;}
 function link(parent,label,url) {if(!/^https:\/\//.test(url))return;const n=el('a',label);n.href=url;n.target='_blank';n.rel='noopener noreferrer';parent.append(n);}
@@ -15,7 +15,7 @@ let dataPromise;let request;
 async function data() {
   if(!dataPromise) dataPromise=Promise.all(['plans','zip-counties','formularies','wellcare'].map(async name=> {
     const r=await fetch('./data/'+name+'.json');if(!r.ok)throw new Error('Prepared plan data could not be loaded. Please retry.');return r.json();
-  })).then(([inventory,zipMap,formularies,wellcare])=>[{...inventory,plans:[...inventory.plans,...wellcare.plans]},zipMap,{...formularies,...wellcare.formularies}]).catch(e=>{dataPromise=null;throw e;});
+  })).then(([inventory,zipMap,formularies,wellcare])=>[{...inventory,wellcare_counties:wellcare.county_options || [],plans:[...inventory.plans,...wellcare.plans]},zipMap,{...formularies,...wellcare.formularies}]).catch(e=>{dataPromise=null;throw e;});
   return dataPromise;
 }
 const picker=medicationPicker(data);
@@ -75,7 +75,7 @@ function renderComparison() {
     const name=el('th',plan.name);name.scope='row';row.append(name,el('td',score===null?reason:`${Math.round(score)} / 100`));
     for(const key of ['premium','dental','otc','moop','specialist','hospital','vision','hearing','transportation']){
       const cell=el('td');const metric=plan.benefit_metrics?.[key];
-      if(metric){link(cell,key==='transportation'?metric.amount+' one-way rides'+(metric.amount===0?' (not covered)':''):money(metric.amount)+(key==='otc'?' / quarter':''),metric.source_url);if(key==='otc')cell.append(el('small',money(metric.amount*4)+' annual equivalent'));if(key!=='premium' && key!=='otc')cell.append(el('small',metric.notes));}
+      if(metric){link(cell,key==='transportation'?metric.amount+' one-way rides'+(metric.amount===0?' (not covered)':''):money(metric.amount)+(key==='otc'?' / quarter':''),metric.source_url);if(key==='otc')cell.append(el('small',money(metric.amount*4)+' annual equivalent'),el('small',metric.notes));if(key!=='premium' && key!=='otc')cell.append(el('small',metric.notes));}
       else cell.append(el('span','Unverified'));
       row.append(cell);
     }
@@ -105,7 +105,7 @@ function exportComparison(ranked,weights) {
   const s=comparisonState;
   const intake=[['Field','Value'],['Candidate name (complete offline)',''],['Additional notes (complete offline)',''],
     ['Export generated',new Date().toISOString()],['Plan data snapshot',s.snapshot],['Plan year','2027'],
-    ['ZIP',s.zip],['County',s.county],['State',s.state],['Carrier',s.carrier],['Line of business','Medicare Advantage'],
+    ['ZIP',s.zip],['County',s.county],['State',s.state],['Carrier',s.carrier],['Location verification',s.manualCounty?'County selected manually; ZIP-to-county relationship unverified':'County selected from prepared ZIP mapping'],['Line of business','Medicare Advantage'],
     ['Drug cost assumptions','30-day supply; network retail pharmacy; initial coverage; standard schedule without Extra Help. Exact coverage, pharmacy participation, price, and deductible completion are not verified.'],
     ['Medications entered',s.drugs.join('\n') || 'None'],['Providers / facilities entered',s.people.join('\n') || 'None'],
     ['Dental priority',priorityLabel(weights.dental)],['OTC priority',priorityLabel(weights.otc)],['Lower premium priority',priorityLabel(weights.premium)],
@@ -120,7 +120,7 @@ function exportComparison(ranked,weights) {
       m.premium?money(m.premium.amount):'Unverified',m.dental?money(m.dental.amount):'Unverified',m.dental?.notes || 'Unverified',
       m.otc?money(m.otc.amount):'Unverified',m.otc?money(m.otc.amount*4):'Unverified',
       ...['moop','specialist','hospital','vision','hearing','transportation'].map(k=>m[k]?(k==='transportation'?m[k].amount+' one-way rides':money(m[k].amount)):'Unverified'),
-      ['moop','specialist','hospital','vision','hearing','transportation'].map(k=>k+': '+(m[k]?.notes || 'Unverified')).join('\n'),
+      ['otc','moop','specialist','hospital','vision','hearing','transportation'].map(k=>k+': '+(m[k]?.notes || 'Unverified')).join('\n'),
       s.drugs.length?(p.ma_only?'Separate Part D needed':'Unverified — check exact drugs and restrictions'):'Not assessed',
       s.people.length?(s.providerStatus.get(p.id) || 'Pending — directory lookup not complete'):'Enter a provider or facility name or NPI to check network participation.',
       p.special_needs?'Special-needs eligibility must be confirmed':'Confirm enrollment eligibility',doc('benefits'),doc('evidence'),doc('formulary'),'','']);
@@ -143,7 +143,7 @@ async function updateCounty(autoState=true) {
   county.replaceChildren(new Option(/^\d{5}$/.test(zip)?'Loading counties…':'Enter a five-digit ZIP',''));
   if(!/^\d{5}$/.test(zip))return;
   try {
-    const [,zipMap]=await data();if(revision!==locationRevision)return;
+    const [inventory,zipMap]=await data();if(revision!==locationRevision)return;
     const zipStates=[...new Set((zipMap[zip] || []).map(c=>c.state))];
     if(autoState && zipStates.length===1 && state.value!==zipStates[0]) {
       state.value=zipStates[0];state.dispatchEvent(new Event('change'));return;
@@ -152,13 +152,15 @@ async function updateCounty(autoState=true) {
       state.value='';state.dispatchEvent(new Event('change'));return;
     }
     if(zipStates.length>1 && !state.value){county.replaceChildren(new Option('Choose a state for this ZIP',''));return;}
-    const counties=(zipMap[zip] || []).filter(c=>c.state===state.value);
-    county.replaceChildren(new Option(counties.length?'Select county':'ZIP not found in selected state',''));
+    const mappedCounties=(zipMap[zip] || []).filter(c=>c.state===state.value);
+    const manualCounty=carrier.value==='Wellcare' && state.value==='NC' && !mappedCounties.length;
+    const counties=manualCounty?inventory.wellcare_counties:mappedCounties;
+    county.replaceChildren(new Option(manualCounty?'ZIP mapping unavailable — confirm county':counties.length?'Select county':'ZIP not found in selected state',''));
     for(const c of counties)county.append(new Option(c.name,c.code));
-    county.value=counties.length===1?counties[0].code:(counties.some(c=>c.code===chosen)?chosen:'');
+    county.value=!manualCounty && counties.length===1?counties[0].code:(counties.some(c=>c.code===chosen)?chosen:'');
   } catch(e) {if(revision===locationRevision)county.replaceChildren(new Option('County lookup unavailable — retry search',''));}
 }
-form.elements.zip.addEventListener('input',()=>updateCounty(true));
+form.elements.zip.addEventListener('input',()=>{county.value='';updateCounty(true);});
 state.addEventListener('change',()=>{request?.abort();county.value='';updateCounty(false);comparisonState?.container.scrollObserver?.disconnect();comparisonState=null;results.replaceChildren(el('p','State changed. Search again to compare plans.'));});
 form.addEventListener('submit',async event=>{
   event.preventDefault();comparisonState?.container.scrollObserver?.disconnect();comparisonState=null;if(request)request.abort();request=new AbortController();const signal=request.signal;
@@ -173,29 +175,32 @@ form.addEventListener('submit',async event=>{
     if(!/^\d{5}$/.test(zip))throw new Error('Enter a five-digit ZIP code.');
     if(people.length>3 || drugs.length>10)throw new Error('Search up to 3 providers/facilities and 10 medications at a time.');
     const [inventory,zipMap,formularies]=await data();if(signal.aborted)return;
-    const counties=(zipMap[zip] || []).filter(c=>c.state===state.value);county.replaceChildren(new Option('Select county',''));
+    const mappedCounties=(zipMap[zip] || []).filter(c=>c.state===state.value);
+    const manualCounty=carrier.value==='Wellcare' && state.value==='NC' && !mappedCounties.length;
+    const counties=manualCounty?inventory.wellcare_counties:mappedCounties;county.replaceChildren(new Option(manualCounty?'ZIP mapping unavailable — confirm county':'Select county',''));
     for(const c of counties)county.append(new Option(c.name,c.code));
-    const selected=counties.find(c=>c.code===chosen) || (counties.length===1?counties[0]:null);
+    const selected=counties.find(c=>c.code===chosen) || (!manualCounty && counties.length===1?counties[0]:null);
     county.value=selected?.code || '';
     if(!selected) {
-      results.replaceChildren(el('h2','Choose your location'),el('p',counties.length?'This ZIP crosses county boundaries. Select your county, then search again.':'This ZIP is not in the prepared lookup for the selected state. No plan availability inferred.'));
+      results.replaceChildren(el('h2','Choose your location'),el('p',counties.length?(manualCounty?'ZIP-to-county mapping is unavailable. Confirm North Carolina and your county, then search again.':'This ZIP crosses county boundaries. Select your county, then search again.'):'This ZIP is not in the prepared lookup for the selected state. No plan availability inferred.'));
       if(counties.length)county.focus();return;
     }
     const plans=inventory.plans.filter(p=>p.carrier===carrier.value && p.state===state.value && p.counties.includes(selected.code) && (!p.verified_zips || p.verified_zips.includes(zip)) && (form.elements.special_needs.checked || !p.special_needs));
-    results.replaceChildren(el('h2',`${plans.length} plans · ${selected.name} County`),el('p',`${carrier.value==='Wellcare'?'Official 2027 ZIP lookup; limited import.':'Official 2027 county mapping.'} Data refreshed ${(carrier.value==='Wellcare'?plans[0]?.documents[0]?.retrieved_at || inventory.snapshot.retrieved_at:inventory.snapshot.retrieved_at).slice(0,10)}. Confirm eligibility and enrollment requirements.`));
-    if(!plans.length)results.append(el('p',carrier.value==='Wellcare'?'Wellcare import currently includes only H1914-007 in ZIP 28202, NC. No availability inferred outside this verified scope.':'Devoted’s published mapping lists no 2027 plans for this county.'));
+    results.replaceChildren(el('h2',`${plans.length} plans · ${selected.name} County`),el('p',`${carrier.value==='Wellcare'?'Official CMS 2027 county availability.':'Official 2027 county mapping.'} Data refreshed ${(carrier.value==='Wellcare'?plans[0]?.documents[0]?.retrieved_at || inventory.snapshot.retrieved_at:inventory.snapshot.retrieved_at).slice(0,10)}. Confirm eligibility and enrollment requirements.`));
+    if(!plans.length)results.append(el('p',carrier.value==='Wellcare'?'The imported CMS release lists no matching Wellcare NC Medicare Advantage plans for this county and eligibility filter. Other states have not been added yet.':'Devoted’s published mapping lists no 2027 plans for this county.'));
+    if(manualCounty)results.append(el('p','County selected manually. ZIP-to-county relationship remains unverified. Confirm residence before enrollment.','notice'));
     const comparison=el('section',undefined,'panel');results.append(comparison);
-    comparisonState={container:comparison,plans,drugs,drugSelections,people,providerSelections,providerStatus:new Map(),coverage:[],zip,county:selected.name,state:state.value,carrier:carrier.value,snapshot:carrier.value==='Wellcare'?plans[0]?.documents[0]?.retrieved_at || inventory.snapshot.retrieved_at:inventory.snapshot.retrieved_at,includeSpecial:form.elements.special_needs.checked};renderComparison();
+    comparisonState={container:comparison,plans,drugs,drugSelections,people,providerSelections,providerStatus:new Map(),coverage:[],zip,county:selected.name,state:state.value,carrier:carrier.value,manualCounty,snapshot:carrier.value==='Wellcare'?plans[0]?.documents[0]?.retrieved_at || inventory.snapshot.retrieved_at:inventory.snapshot.retrieved_at,includeSpecial:form.elements.special_needs.checked};renderComparison();
     const sections=new Map();
     for(const plan of plans) {
       const card=el('article',undefined,'plan');card.append(el('span',plan.business,'badge'),el('h3',plan.name),
         el('p',`${plan.carrier} · ${plan.year} · ${selected.name}, ${state.value} · ZIP ${zip}`),el('p','Monthly premium: '+plan.premium));
-      card.append(el('small','Premium extracted from the Summary of Benefits. Other costs and conditions apply.'));
+      card.append(el('small','Premium extracted from the Summary of Benefits. Other costs and conditions apply.'));if(plan.product_network_id)card.append(el('p','Official directory product network: '+plan.product_network_id,'metadata'));
       if(plan.scope_note)card.append(el('p',plan.scope_note,'notice'));
       for(const doc of plan.documents) {const row=el('p');link(row,({benefits:'Summary of Benefits',evidence:'Evidence of Coverage',formulary:'2027 Drug List'})[doc.kind],doc.url);card.append(row);}
       for(const drug of drugs){const matches=drugMatches(plan,drug,formularies);check(card,'Medication',drug,matches);comparisonState.coverage.push({plan:plan.name,kind:'Medication',term:drug,matches});}
       const providerSection=el('div');card.append(providerSection);sections.set(plan.id,providerSection);
-      link(card,'Official provider search',plan.carrier==='Wellcare'?'https://wellcare.isf.io/':`https://www.devoted.com/search-providers/#filterType=all&p=${encodeURIComponent(plan.name.includes('(PPO')?'PPO':'HMO')}&q=&s=${encodeURIComponent(state.value)}&y=2027`);
+      link(card,'Official provider search',plan.carrier==='Wellcare'?plan.provider_search_url || 'https://wellcare.isf.io/':`https://www.devoted.com/search-providers/#filterType=all&p=${encodeURIComponent(plan.name.includes('(PPO')?'PPO':'HMO')}&q=&s=${encodeURIComponent(state.value)}&y=2027`);
       const details=el('details');details.id='plan-'+plan.id;details.append(el('summary',plan.name+' · Plan details'),card);results.append(details);
     }
     if(people.length && plans.length) {
@@ -206,7 +211,7 @@ form.addEventListener('submit',async event=>{
           for(const plan of plans) {
             const matches=found.matches.get(plan.id);
             comparisonState.coverage.push({plan:plan.name,kind:providerSelections.find(p=>p.label===term)?.kind==='facility'?'Facility':'Provider',term,matches,partial:found.truncated});
-            check(sections.get(plan.id),providerSelections.find(p=>p.label===term)?.kind==='facility'?'Facility':'Provider',term,matches,found.truncated?'Unverified — search incomplete; use the official directory.':undefined);
+            check(sections.get(plan.id),providerSelections.find(p=>p.label===term)?.kind==='facility'?'Facility':'Provider',term,matches,found.truncated?'Unverified — use the official plan directory to check this exact office.':undefined);
             const previous=comparisonState.providerStatus.get(plan.id);
             const uncertain=found.truncated || !matches.length || previous?.includes('Unverified');
             comparisonState.providerStatus.set(plan.id,uncertain?'Unverified — review directory':'Matches found — verify all offices');
