@@ -79,7 +79,6 @@ function renderComparison() {
 function exportComparison(ranked,weights) {
   const s=comparisonState;
   const intake=[['Field','Value'],['Candidate name (complete offline)',''],['Additional notes (complete offline)',''],
-    ['Reviewer name (complete offline)',''],['Reviewer decision (complete offline)',''],
     ['Export generated',new Date().toISOString()],['Plan data snapshot',s.snapshot],['Plan year','2027'],
     ['ZIP',s.zip],['County',s.county],['State','NC'],['Carrier','Devoted Health'],['Line of business','Medicare Advantage'],
     ['Medications entered',s.drugs.join('\n') || 'None'],['Providers entered',s.people.join('\n') || 'None'],
