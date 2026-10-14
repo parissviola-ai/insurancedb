@@ -41,6 +41,7 @@ function check(parent,kind,term,matches,message) {
   parent.append(section);
 }
 let comparisonState=null;
+const priorityLabel=value=>({0:'Not a priority',1:'Low',3:'Medium',5:'High'})[value] || 'Not a priority';
 const money=value=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:0}).format(value);
 function renderComparison() {
   if(!comparisonState)return;
@@ -82,8 +83,8 @@ function exportComparison(ranked,weights) {
     ['Export generated',new Date().toISOString()],['Plan data snapshot',s.snapshot],['Plan year','2027'],
     ['ZIP',s.zip],['County',s.county],['State','NC'],['Carrier','Devoted Health'],['Line of business','Medicare Advantage'],
     ['Medications entered',s.drugs.join('\n') || 'None'],['Providers entered',s.people.join('\n') || 'None'],
-    ['Dental priority (0–5)',weights.dental],['OTC priority (0–5)',weights.otc],['Lower premium priority (0–5)',weights.premium],
-    ['Medical maximum priority (0–5)',weights.moop],['Specialist priority (0–5)',weights.specialist],['Hospital priority (0–5)',weights.hospital],['Vision priority (0–5)',weights.vision],['Hearing priority (0–5)',weights.hearing],
+    ['Dental priority',priorityLabel(weights.dental)],['OTC priority',priorityLabel(weights.otc)],['Lower premium priority',priorityLabel(weights.premium)],
+    ['Medical maximum priority',priorityLabel(weights.moop)],['Specialist priority',priorityLabel(weights.specialist)],['Hospital priority',priorityLabel(weights.hospital)],['Vision priority',priorityLabel(weights.vision)],['Hearing priority',priorityLabel(weights.hearing)],
     ['Special-needs plans included',s.includeSpecial?'Yes — eligibility must be confirmed':'No'],
     ['Ranking scope','Benefit amounts, selected in-network medical costs, and plan premium only. Medication/provider coverage and eligibility require separate review.'],
     ['Missing data','Unverified, never treated as zero. OTC annual equivalent assumes four quarters, not rollover.'],
@@ -108,7 +109,7 @@ function exportComparison(ranked,weights) {
   const a=el('a');const url=URL.createObjectURL(workbook([{name:'Intake and priorities',rows:intake},{name:'Plan comparison',rows},{name:'Coverage review',rows:coverage}]));
   a.href=url;a.download=`plan-comparison-2027-${s.zip}.xlsx`;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
-for(const key of priorityKeys)form.elements['weight_'+key].addEventListener('input',()=>{document.querySelector('#'+key+'-value').value=form.elements['weight_'+key].value;renderComparison();});
+for(const key of priorityKeys)form.elements['weight_'+key].addEventListener('change',renderComparison);
 form.elements.zip.addEventListener('input',()=>county.replaceChildren(new Option('Choose after ZIP lookup','')));
 form.addEventListener('submit',async event=>{
   event.preventDefault();comparisonState=null;if(request)request.abort();request=new AbortController();const signal=request.signal;
