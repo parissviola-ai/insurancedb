@@ -74,8 +74,8 @@ export async function providerSuggestions(term,signal,state='NC') {
   if(!/^\d{10}$/.test(term))query['_has:PractitionerRole:practitioner:location.address-state']=state;
   let people=await fhirSearch('Practitioner',query,signal,1);
   const words=term.trim().split(/\s+/);
-  if(!people.rows.length && words.length>2){
-    const alternate={...query,family:words.slice(-1)[0],given:words[0]};
+  for(let i=2;!people.rows.length && i<Math.min(words.length,5);i++){
+    const alternate={...query,family:words.slice(i).join(' '),given:words[0]};
     people=await fhirSearch('Practitioner',alternate,signal,1);
   }
   const options=[],seen=new Set();let truncated=people.truncated;
