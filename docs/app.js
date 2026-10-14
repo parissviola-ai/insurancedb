@@ -110,7 +110,21 @@ function exportComparison(ranked,weights) {
   a.href=url;a.download=`plan-comparison-2027-${s.zip}.xlsx`;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
 for(const key of priorityKeys)form.elements['weight_'+key].addEventListener('change',renderComparison);
-form.elements.zip.addEventListener('input',()=>county.replaceChildren(new Option('Choose after ZIP lookup','')));
+let locationRevision=0;
+async function updateCounty() {
+  const revision=++locationRevision;
+  const zip=form.elements.zip.value.trim();const chosen=county.value;
+  county.replaceChildren(new Option(/^\d{5}$/.test(zip)?'Loading counties…':'Enter a five-digit ZIP',''));
+  if(!/^\d{5}$/.test(zip))return;
+  try {
+    const [,zipMap]=await data();if(revision!==locationRevision)return;
+    const counties=zipMap[zip] || [];
+    county.replaceChildren(new Option(counties.length?'Select county':'ZIP not found in NC lookup',''));
+    for(const c of counties)county.append(new Option(c.name,c.code));
+    county.value=counties.length===1?counties[0].code:(counties.some(c=>c.code===chosen)?chosen:'');
+  } catch(e) {if(revision===locationRevision)county.replaceChildren(new Option('County lookup unavailable — retry search',''));}
+}
+form.elements.zip.addEventListener('input',updateCounty);
 form.addEventListener('submit',async event=>{
   event.preventDefault();comparisonState=null;if(request)request.abort();request=new AbortController();const signal=request.signal;
   const zip=form.elements.zip.value.trim();const chosen=county.value;
