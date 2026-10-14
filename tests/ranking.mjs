@@ -10,3 +10,7 @@ assert(rankPlans(plans,{dental:0,otc:0,premium:0}).every(r=>r.score===null));
 assert.equal(rankPlans([p('MA',2000,50,0,{ma_only:true})],{dental:1},true)[0].score,null);
 assert.equal(rankPlans([p('Tie1',1000,50,0),p('Tie2',1000,50,0)],{dental:1,otc:1,premium:1})[0].score,100);
 console.log('Ranking checks passed: priorities, missing data, eligibility, Part D, all-zero weights, ties.');
+const medical=[{id:'Low',name:'Low',benefit_metrics:{moop:{amount:4000},specialist:{amount:20},hospital:{amount:1500},vision:{amount:200},hearing:{amount:399}}},{id:'High',name:'High',benefit_metrics:{moop:{amount:9000},specialist:{amount:50},hospital:{amount:3000},vision:{amount:400},hearing:{amount:699}}}];
+for(const k of ['moop','specialist','hospital','hearing'])assert.equal(rankPlans(medical,{[k]:5})[0].plan.id,'Low');
+assert.equal(rankPlans(medical,{vision:5})[0].plan.id,'High');
+console.log('Additional priority directions passed.');

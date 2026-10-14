@@ -1,5 +1,5 @@
 import {providers} from './provider.js';
-import {rankPlans} from './ranking.js';
+import {rankPlans,priorityKeys} from './ranking.js';
 import {workbook} from './excel.js';
 const form=document.querySelector('#search'); const results=document.querySelector('#results');
 const state=document.querySelector('#state');state.append(new Option('North Carolina','NC'));
@@ -45,22 +45,22 @@ const money=value=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD
 function renderComparison() {
   if(!comparisonState)return;
   const {container,plans,drugs,people,providerStatus}=comparisonState;
-  const weights={};for(const key of ['dental','otc','premium'])weights[key]=Number(form.elements['weight_'+key].value);
+  const weights={};for(const key of priorityKeys)weights[key]=Number(form.elements['weight_'+key].value);
   const ranked=rankPlans(plans,weights,drugs.length>0);
   container.replaceChildren(el('h2','Compare plans'));
   const best=ranked.filter(r=>r.score!==null && Math.abs(r.score-ranked[0].score)<0.0001);
   if(best.length)container.append(el('p',`Top benefit match${best.length>1?'es (tie)':''}: ${best.map(r=>r.plan.name).join('; ')}. Based only on your selected benefit priorities.`,'recommendation'));
   else container.append(el('p','No ranking available. Select priorities or review missing benefit amounts.'));
-  container.append(el('p','Scores compare available dollar allowances and plan premiums within these results. Dental reimbursement rules differ. Medication, provider, and eligibility checks must be completed before choosing a plan. Missing amounts are unverified, never treated as $0.'));
+  container.append(el('p','Scores compare selected allowances, in-network medical costs, and plan premiums within these results. Dental reimbursement rules differ. Medication, provider, and eligibility checks must be completed before choosing a plan. Missing amounts are unverified, never treated as $0.'));
   const wrap=el('div',undefined,'comparison-scroll');const table=el('table');table.append(el('caption','2027 plans for your selected county'));
-  const head=el('tr');for(const name of ['Plan','Benefit match','Monthly premium','Dental / year','OTC','Medications','Providers','Details']){const th=el('th',name);th.scope='col';head.append(th);}const thead=el('thead');thead.append(head);table.append(thead);
+  const head=el('tr');for(const name of ['Plan','Benefit match','Monthly premium','Dental / year','OTC','Medical maximum / year','Specialist / visit','Hospital / 7-day stay','Eyewear / year','Advanced hearing aid / aid','Medications','Providers','Details']){const th=el('th',name);th.scope='col';head.append(th);}const thead=el('thead');thead.append(head);table.append(thead);
   const body=el('tbody');
   for(const {plan,score,reason} of ranked){
     const row=el('tr');if(score!==null && best.some(r=>r.plan.id===plan.id))row.className='top-match';
     const name=el('th',plan.name);name.scope='row';row.append(name,el('td',score===null?reason:`${Math.round(score)} / 100`));
-    for(const key of ['premium','dental','otc']){
+    for(const key of ['premium','dental','otc','moop','specialist','hospital','vision','hearing']){
       const cell=el('td');const metric=plan.benefit_metrics?.[key];
-      if(metric){link(cell,money(metric.amount)+(key==='otc'?' / quarter':''),metric.source_url);if(key==='otc')cell.append(el('small',money(metric.amount*4)+' annual equivalent'));if(key==='dental')cell.append(el('small',metric.notes));}
+      if(metric){link(cell,money(metric.amount)+(key==='otc'?' / quarter':''),metric.source_url);if(key==='otc')cell.append(el('small',money(metric.amount*4)+' annual equivalent'));if(key!=='premium' && key!=='otc')cell.append(el('small',metric.notes));}
       else cell.append(el('span','Unverified'));
       row.append(cell);
     }
@@ -73,7 +73,7 @@ function renderComparison() {
   exportButton.disabled=!plans.length;
   exportButton.addEventListener('click',()=>exportComparison(ranked,weights));container.append(exportButton);
   container.append(el('p','Export contains the current search and priorities. Add the candidate name, notes, and reviewer decision in Excel after downloading.','metadata'));
-  container.append(el('small','Score: weighted, relative benefit amounts. Higher dental/OTC allowances and lower premium score higher; equal values tie. Only plans with amounts for every selected priority are scored. Special-needs plans are not ranked; compare them manually after confirming eligibility.'));
+  container.append(el('small','Score: weighted, relative benefit amounts. Higher allowances and lower medical costs and premiums score higher; equal values tie. Only plans with amounts for every selected priority are scored. Special-needs plans are not ranked; compare them manually after confirming eligibility.'));
 }
 function exportComparison(ranked,weights) {
   const s=comparisonState;
@@ -83,15 +83,18 @@ function exportComparison(ranked,weights) {
     ['ZIP',s.zip],['County',s.county],['State','NC'],['Carrier','Devoted Health'],['Line of business','Medicare Advantage'],
     ['Medications entered',s.drugs.join('\n') || 'None'],['Providers entered',s.people.join('\n') || 'None'],
     ['Dental priority (0–5)',weights.dental],['OTC priority (0–5)',weights.otc],['Lower premium priority (0–5)',weights.premium],
+    ['Medical maximum priority (0–5)',weights.moop],['Specialist priority (0–5)',weights.specialist],['Hospital priority (0–5)',weights.hospital],['Vision priority (0–5)',weights.vision],['Hearing priority (0–5)',weights.hearing],
     ['Special-needs plans included',s.includeSpecial?'Yes — eligibility must be confirmed':'No'],
-    ['Ranking scope','Benefit amounts and plan premium only. Medication/provider coverage and eligibility require separate review.'],
+    ['Ranking scope','Benefit amounts, selected in-network medical costs, and plan premium only. Medication/provider coverage and eligibility require separate review.'],
     ['Missing data','Unverified, never treated as zero. OTC annual equivalent assumes four quarters, not rollover.'],
     ['Privacy','Generated locally. Candidate name and notes are blank and entered only in the downloaded workbook.']];
-  const rows=[['Plan','Plan ID','Benefit match / 100','Ranking status','Monthly premium','Dental / year','Dental conditions','OTC / quarter','OTC annual equivalent','Medication review','Provider review','Eligibility','Summary of Benefits','Evidence of Coverage','Formulary','Reviewer choice (offline)','Reviewer notes (offline)']];
+  const rows=[['Plan','Plan ID','Benefit match / 100','Ranking status','Monthly premium','Dental / year','Dental conditions','OTC / quarter','OTC annual equivalent','Medical maximum / year','Specialist / visit','Hospital / 7-day stay','Eyewear / year','Advanced hearing aid / aid','Other benefit conditions','Medication review','Provider review','Eligibility','Summary of Benefits','Evidence of Coverage','Formulary','Reviewer choice (offline)','Reviewer notes (offline)']];
   for(const r of ranked){const p=r.plan,m=p.benefit_metrics || {},doc=kind=>p.documents.find(d=>d.kind===kind)?.url || 'Not available';
     rows.push([p.name,p.locator,r.score===null?'Unranked':Math.round(r.score),r.score===null?r.reason:'Relative benefit match only',
       m.premium?money(m.premium.amount):'Unverified',m.dental?money(m.dental.amount):'Unverified',m.dental?.notes || 'Unverified',
       m.otc?money(m.otc.amount):'Unverified',m.otc?money(m.otc.amount*4):'Unverified',
+      ...['moop','specialist','hospital','vision','hearing'].map(k=>m[k]?money(m[k].amount):'Unverified'),
+      ['moop','specialist','hospital','vision','hearing'].map(k=>k+': '+(m[k]?.notes || 'Unverified')).join('\n'),
       s.drugs.length?(p.ma_only?'Separate Part D needed':'Unverified — check exact drugs and restrictions'):'Not assessed',
       s.people.length?(s.providerStatus.get(p.id) || 'Pending — directory lookup not complete'):'Not assessed',
       p.special_needs?'Special-needs eligibility must be confirmed':'Confirm enrollment eligibility',doc('benefits'),doc('evidence'),doc('formulary'),'','']);
@@ -105,7 +108,7 @@ function exportComparison(ranked,weights) {
   const a=el('a');const url=URL.createObjectURL(workbook([{name:'Intake and priorities',rows:intake},{name:'Plan comparison',rows},{name:'Coverage review',rows:coverage}]));
   a.href=url;a.download=`plan-comparison-2027-${s.zip}.xlsx`;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
-for(const key of ['dental','otc','premium'])form.elements['weight_'+key].addEventListener('input',()=>{document.querySelector('#'+key+'-value').value=form.elements['weight_'+key].value;renderComparison();});
+for(const key of priorityKeys)form.elements['weight_'+key].addEventListener('input',()=>{document.querySelector('#'+key+'-value').value=form.elements['weight_'+key].value;renderComparison();});
 form.elements.zip.addEventListener('input',()=>county.replaceChildren(new Option('Choose after ZIP lookup','')));
 form.addEventListener('submit',async event=>{
   event.preventDefault();comparisonState=null;if(request)request.abort();request=new AbortController();const signal=request.signal;
