@@ -63,7 +63,7 @@ export async function providers(term, plans, signal, selection=null) {
 }
 
 export async function providerSuggestions(term,signal,state='NC') {
-  const people=await fhirSearch('Practitioner',{...personQuery(term),_count:'5'},signal,1);
+  const people=await fhirSearch('Practitioner',{...personQuery(term),_count:'5','_has:PractitionerRole:practitioner:location.address-state':state},signal,1);
   const options=[],seen=new Set();let truncated=people.truncated;
   for(const person of people.rows.slice(0,5)) {
     const roles=await fhirSearch('PractitionerRole',{practitioner:'Practitioner/'+person.id,_count:'100'},signal);
@@ -90,7 +90,7 @@ function active2027(r){return r.active===true && r.period?.start && r.period.sta
 function officeText(location){const a=location.address || {};return a.text || [...(a.line || []),a.city,a.state,a.postalCode].filter(Boolean).join(', ');}
 function phoneOf(...resources){return resources.flatMap(r=>r?.telecom || []).find(t=>t.system==='phone')?.value || '';}
 export async function facilitySuggestions(term,signal,state='NC'){
- const q={_count:'5'};if(/^\d{10}$/.test(term))q.identifier='http://hl7.org/fhir/sid/us-npi|'+term;else q.name=term;
+ const q={_count:'5','_has:OrganizationAffiliation:participating-organization:location.address-state':state};if(/^\d{10}$/.test(term))q.identifier='http://hl7.org/fhir/sid/us-npi|'+term;else q.name=term;
  const organizations=await fhirSearch('Organization',q,signal,1);const options=[],seen=new Set();let truncated=organizations.truncated;
  for(const org of organizations.rows){
   const affiliations=await fhirSearch('OrganizationAffiliation',{'participating-organization':'Organization/'+org.id,_count:'100'},signal);truncated ||= affiliations.truncated;

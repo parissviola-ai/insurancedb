@@ -1,4 +1,4 @@
-import {providers} from './provider.js?v=15-states';
+import {providers} from './provider.js?v=state-typeahead';
 import {rankPlans,priorityKeys} from './ranking.js';
 import {workbook} from './excel.js';
 import {medicationPicker} from './medications.js';

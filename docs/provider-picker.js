@@ -1,4 +1,4 @@
-import {providerSuggestions,facilitySuggestions} from './provider.js?v=15-states';
+import {providerSuggestions,facilitySuggestions} from './provider.js?v=state-typeahead';
 export function providerPicker(){
  const input=document.querySelector('#provider-search'),list=document.querySelector('#provider-suggestions'),selected=document.querySelector('#selected-providers'),message=document.querySelector('#provider-message');
  let items=[],options=[],active=-1,timer,request,revision=0;
