@@ -20,7 +20,7 @@ function drugMatches(plan,term,formularies) {
     const rows=formularies[doc.url]?.rows || [];
     for(const row of rows.filter(r=>r.name.toLowerCase().includes(term.toLowerCase())).slice(0,5)) hits.push({
       name:row.name,detail:`Tier ${row.tier} · PDF page ${row.page}`,status:'Review required',
-      restrictions:(row.restrictions || 'No restriction text captured.')+' Text extraction may miss wrapped restrictions. Confirm strength/form and PA/ST/QL in the original PDF.',
+      restrictions:row.restrictions || '',
       source_url:doc.url+'#page='+row.page});
   }
   return hits;
@@ -28,7 +28,14 @@ function drugMatches(plan,term,formularies) {
 function check(parent,kind,term,matches,message) {
   const section=el('div',undefined,'check');section.append(el('strong',kind+': '+term));
   if(!matches.length)section.append(el('p',message || 'Unverified — no matching source record. This does not establish exclusion.','badge unverified'));
-  for(const m of matches) {section.append(el('p',m.name+' · '+m.detail),el('span',m.status,'badge unverified'),el('p',m.restrictions));link(section,'Source record',m.source_url);}
+  for(const m of matches) {
+    section.append(el('p',m.name+' · '+m.detail),el('span',m.status,'badge unverified'));
+    if(m.restrictions) section.append(el('p',m.restrictions));
+    if(kind==='Medication') {
+      const note=el('p','Restrictions unverified — ');
+      link(note,'check the official formulary',m.source_url);section.append(note);
+    } else link(section,'Source record',m.source_url);
+  }
   parent.append(section);
 }
 form.elements.zip.addEventListener('input',()=>county.replaceChildren(new Option('Choose after ZIP lookup','')));
