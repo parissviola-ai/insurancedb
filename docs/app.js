@@ -77,7 +77,18 @@ function renderComparison() {
     row.append(el('td',people.length?(providerStatus.get(plan.id) || 'Checking directory…'):'Not assessed'));
     const detail=el('td');const a=el('a','View details');a.href='#plan-'+plan.id;a.addEventListener('click',()=>{const d=document.querySelector('#plan-'+plan.id);if(d)d.open=true;});detail.append(a);row.append(detail);body.append(row);
   }
-  table.append(body);wrap.append(table);container.append(wrap);
+  table.append(body);wrap.append(table);
+  const topScroll=el('div',undefined,'comparison-top-scroll');
+  topScroll.tabIndex=0;topScroll.setAttribute('role','region');
+  topScroll.setAttribute('aria-label','Scroll plan comparison horizontally');
+  const track=el('div');topScroll.append(track);
+  container.append(el('p','Scroll across to compare all benefits.','comparison-scroll-hint'),topScroll,wrap);
+  topScroll.addEventListener('scroll',()=>{if(wrap.scrollLeft!==topScroll.scrollLeft)wrap.scrollLeft=topScroll.scrollLeft;});
+  wrap.addEventListener('scroll',()=>{if(topScroll.scrollLeft!==wrap.scrollLeft)topScroll.scrollLeft=wrap.scrollLeft;});
+  const sizeTrack=()=>{track.style.width=table.scrollWidth+'px';topScroll.scrollLeft=wrap.scrollLeft;};
+  const observer=new ResizeObserver(sizeTrack);observer.observe(table);
+  if(container.scrollObserver)container.scrollObserver.disconnect();container.scrollObserver=observer;
+  requestAnimationFrame(sizeTrack);
   const exportButton=el('button','Export comparison to Excel');exportButton.type='button';
   exportButton.disabled=!plans.length;
   exportButton.addEventListener('click',()=>exportComparison(ranked,weights));container.append(exportButton);
@@ -135,7 +146,7 @@ async function updateCounty() {
 }
 form.elements.zip.addEventListener('input',updateCounty);
 form.addEventListener('submit',async event=>{
-  event.preventDefault();comparisonState=null;if(request)request.abort();request=new AbortController();const signal=request.signal;
+  event.preventDefault();comparisonState?.container.scrollObserver?.disconnect();comparisonState=null;if(request)request.abort();request=new AbortController();const signal=request.signal;
   const zip=form.elements.zip.value.trim();const chosen=county.value;
   const drugs=terms(form.elements.medication.value),people=terms(form.elements.provider.value);
   results.setAttribute('aria-busy','true');results.replaceChildren(el('p','Searching…'));
