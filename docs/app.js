@@ -74,7 +74,7 @@ function renderComparison() {
       row.append(cell);
     }
     row.append(el('td',drugs.length?(plan.ma_only?'MA only — separate drug plan required':'Formulary matches require review'):'Not assessed'));
-    row.append(el('td',people.length?(providerStatus.get(plan.id) || 'Checking directory…'):'Not assessed'));
+    row.append(el('td',people.length?(providerStatus.get(plan.id) || 'Checking directory…'):'Enter a provider name or NPI to check network participation.'));
     const detail=el('td');const a=el('a','View details');a.href='#plan-'+plan.id;a.addEventListener('click',()=>{const d=document.querySelector('#plan-'+plan.id);if(d)d.open=true;});detail.append(a);row.append(detail);body.append(row);
   }
   table.append(body);wrap.append(table);
@@ -116,7 +116,7 @@ function exportComparison(ranked,weights) {
       ...['moop','specialist','hospital','vision','hearing'].map(k=>m[k]?money(m[k].amount):'Unverified'),
       ['moop','specialist','hospital','vision','hearing'].map(k=>k+': '+(m[k]?.notes || 'Unverified')).join('\n'),
       s.drugs.length?(p.ma_only?'Separate Part D needed':'Unverified — check exact drugs and restrictions'):'Not assessed',
-      s.people.length?(s.providerStatus.get(p.id) || 'Pending — directory lookup not complete'):'Not assessed',
+      s.people.length?(s.providerStatus.get(p.id) || 'Pending — directory lookup not complete'):'Enter a provider name or NPI to check network participation.',
       p.special_needs?'Special-needs eligibility must be confirmed':'Confirm enrollment eligibility',doc('benefits'),doc('evidence'),doc('formulary'),'','']);
   }
   const coverage=[['Plan','Check','Entered value','Candidate match','Office or drug detail','Review status','Restrictions / conditions','Source','Plan-listed tier cost','Cost assumptions','Cost source','Deductible conditions']];
