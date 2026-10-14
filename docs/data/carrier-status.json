@@ -1,0 +1,168 @@
+{
+  "updated_on": "2026-10-14",
+  "carriers": [
+    {
+      "name": "Devoted Health",
+      "phase": "Connected",
+      "scope": "2027 Medicare Advantage · 15 target states",
+      "availability": "442 plans imported with county availability and prepared ZIP lookup.",
+      "benefits": "Official benefit documents imported; unresolved amounts stay unverified.",
+      "medications": "Formulary candidates, captured restrictions and source-listed costs imported. Exact drug coverage requires review.",
+      "providers": "Live provider/facility checks connected. Confirm exact office, dates and participation.",
+      "connection": "Public FHIR directory connected without credentials.",
+      "next_step": "Continue validating medication strengths, restrictions and exact office results.",
+      "links": [
+        {
+          "label": "Official developer documentation",
+          "url": "https://www.devoted.com/developers/"
+        }
+      ]
+    },
+    {
+      "name": "Wellcare",
+      "phase": "Partially connected",
+      "scope": "2027 Medicare Advantage · North Carolina live; 15-state inventory researched",
+      "availability": "Seven NC plans imported. Research inventory: 151 state/plan/segment records across 15 states; 124 network candidates and 27 unmatched. CMS release lists only PDP in AL, TN and VA.",
+      "benefits": "Seven NC plans: official benefits and coverage documents imported. Other states pending.",
+      "medications": "Four NC formularies imported as candidates with preferred retail cost schedules. Patriot Giveback has no included Part D.",
+      "providers": "Plan-specific official directory links available. Automated checks are not connected.",
+      "connection": "Website search tested; requires API key. Public FHIR did not yield the specific CMS plan/year mappings needed. API support email sent by project owner; reply pending.",
+      "next_step": "Obtain supported API access, verify network candidates, and import documents for the next states.",
+      "links": [
+        {
+          "label": "Centene public directory documentation",
+          "url": "https://partners.centene.com/apiDetail/8122bc9c-43d6-4a2a-b6be-2272df8b8566"
+        },
+        {
+          "label": "Official provider search",
+          "url": "https://my.wellcare.com/x/findaprovider/medicare/en/default/location"
+        }
+      ]
+    },
+    {
+      "name": "UnitedHealthcare / AARP",
+      "phase": "Research",
+      "scope": "Medicare products first; other lines pending",
+      "availability": "Official ZIP/county shopping source found; not imported.",
+      "benefits": "Not imported.",
+      "medications": "Not imported.",
+      "providers": "Not connected.",
+      "connection": "Third-party API listing found; endpoint unavailable from this environment. Linked UHC documentation displayed “Coming soon” to project owner. No working integration verified.",
+      "next_step": "Return after Wellcare; verify official endpoints/access and 2027 documents.",
+      "links": [
+        {
+          "label": "Official Medicare plan website",
+          "url": "https://www.aarpmedicareplans.com/"
+        }
+      ]
+    },
+    {
+      "name": "Molina",
+      "phase": "Research",
+      "scope": "KY, NY, OH, SC, TX supplied by project owner; product availability unverified",
+      "availability": "Not imported.",
+      "benefits": "Not imported.",
+      "medications": "Not imported.",
+      "providers": "Not connected.",
+      "connection": "Initial research only; no usable API verified.",
+      "next_step": "Find current official interoperability documentation and 2027 plan sources.",
+      "links": []
+    },
+    {
+      "name": "HealthSpring",
+      "phase": "Not started",
+      "scope": "DE, FL, GA, KY, LA, NC, NY, OH, PA, SC, TN, TX, VA supplied; availability unverified",
+      "availability": "Not imported.",
+      "benefits": "Not imported.",
+      "medications": "Not imported.",
+      "providers": "Not connected.",
+      "connection": "Not investigated.",
+      "next_step": "Confirm product/state scope and official data sources before importing.",
+      "links": []
+    },
+    {
+      "name": "Aetna",
+      "phase": "Not started",
+      "scope": "Medicare Advantage, Part D, Medigap and supplemental products requested; scope unverified",
+      "availability": "Not imported.",
+      "benefits": "Not imported.",
+      "medications": "Not imported.",
+      "providers": "Not connected.",
+      "connection": "Not investigated.",
+      "next_step": "Confirm product/state scope and official data sources before importing.",
+      "links": []
+    },
+    {
+      "name": "CareFirst",
+      "phase": "Not started",
+      "scope": "Carrier supplied; states and products to verify",
+      "availability": "Not imported.",
+      "benefits": "Not imported.",
+      "medications": "Not imported.",
+      "providers": "Not connected.",
+      "connection": "Not investigated.",
+      "next_step": "Confirm product/state scope and official data sources before importing.",
+      "links": []
+    },
+    {
+      "name": "Cigna",
+      "phase": "Not started",
+      "scope": "Carrier supplied; product scope and relationship to HealthSpring branding to verify",
+      "availability": "Not imported.",
+      "benefits": "Not imported.",
+      "medications": "Not imported.",
+      "providers": "Not connected.",
+      "connection": "Not investigated.",
+      "next_step": "Confirm product/state scope and official data sources before importing.",
+      "links": []
+    },
+    {
+      "name": "Excellus BlueCross BlueShield",
+      "phase": "Not started",
+      "scope": "New York supplied; plan availability to verify",
+      "availability": "Not imported.",
+      "benefits": "Not imported.",
+      "medications": "Not imported.",
+      "providers": "Not connected.",
+      "connection": "Not investigated.",
+      "next_step": "Confirm product/state scope and official data sources before importing.",
+      "links": []
+    },
+    {
+      "name": "Medico",
+      "phase": "Not started",
+      "scope": "Carrier supplied; states and products to verify",
+      "availability": "Not imported.",
+      "benefits": "Not imported.",
+      "medications": "Not imported.",
+      "providers": "Not connected.",
+      "connection": "Not investigated.",
+      "next_step": "Confirm product/state scope and official data sources before importing.",
+      "links": []
+    },
+    {
+      "name": "Guarantee Trust Life",
+      "phase": "Not started",
+      "scope": "Supplemental products supplied; availability to verify",
+      "availability": "Not imported.",
+      "benefits": "Not imported.",
+      "medications": "Not imported.",
+      "providers": "Not connected.",
+      "connection": "Not investigated.",
+      "next_step": "Confirm product/state scope and official data sources before importing.",
+      "links": []
+    },
+    {
+      "name": "Highmark Wholecare",
+      "phase": "Not started",
+      "scope": "Carrier supplied; target-state availability and products to verify",
+      "availability": "Not imported.",
+      "benefits": "Not imported.",
+      "medications": "Not imported.",
+      "providers": "Not connected.",
+      "connection": "Not investigated.",
+      "next_step": "Confirm product/state scope and official data sources before importing.",
+      "links": []
+    }
+  ]
+}
