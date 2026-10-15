@@ -148,3 +148,20 @@ For refreshes, first obtain a current catalog using `sync_wellcare_catalog.py`. 
 ### Carrier setup tracker
 
 `docs/status.html` provides a searchable, nontechnical setup tracker linked from the dashboard footer. Its single source is `docs/data/carrier-status.json`. Update this file after verified integration changes, separating researched inventory from published dashboard data, source candidates from confirmed connections, and outstanding access from successful tests. Do not include appointment notes, credentials, candidate information, or individual provider records. Track product scope, availability, benefits, medication data, provider searches, connection status, next steps and official source links. Dates reflect the status review, not freshness of every carrier document.
+
+### HealthSpring 2027 North Carolina pilot
+
+The static dashboard includes HealthSpring (formerly Cigna Medicare) True Choice (PPO), H7849-113-001, for its 11 CMS-confirmed NC counties. ZIP 28262 requires choosing Mecklenburg or Cabarrus. Only this pilot plan is imported; this does not imply other plans or states are unavailable. The official Summary of Benefits, Evidence of Coverage, MAPD formulary 00027063, and NC PPO provider/pharmacy directory are linked. Extracted formulary candidates retain physical PDF page numbers and wrapped restrictions; the two-column parser keeps neighboring drugs separate. Some source names group strengths/forms, so exact prescriptions still require review. Drug costs use preferred network retail, 30-day initial coverage without Extra Help; standard retail Tier 1/Tier 2 are $10/$20 rather than $0/$8. Source conditions and deductible rules are preserved. OTC and routine transportation amounts remain unverified; hearing aids are shown as not covered, never scored as a $0 hearing-aid copay.
+
+Refresh the verified pilot with normal TLS validation and `pdftotext` installed:
+
+```bash
+python import_healthspring.py --cache /tmp/healthspring-documents --landscape /tmp/cms-2027-landscape.zip
+python -m unittest discover -s tests -v
+node tests/healthspring.mjs
+node tests/ranking.mjs
+```
+
+The official CMS archive is https://www.cms.gov/files/zip/cy2027-landscape-202609-1.zip. The importer checks document year, plan/segment identity, CMS/PDF service-area agreement, source schedules and representative formulary restrictions; it stops on mismatches. `docs/data/healthspring.json` is separate from Devoted and Wellcare data and is not overwritten by their exporters. PDF cache files stay outside Git.
+
+Public HealthSpring FHIR is reachable at `https://data.healthspring.healthlx.com:8003/`. The catalog checked on October 14, 2026 contained 618 plan records with 2025/2026 coverage periods; no 2027 records were found. `docs/healthspring.js` prepares an anonymous read-only exact plan/year lookup and requires a full-year active InsurancePlan with matching CMS segment and network references. It never promotes historical records to 2027 or establishes provider coverage from a plan mapping alone. For this pilot, providers/facilities are added manually and remain unverified, with official directory links and review details in Excel. No provider names or candidate information are sent to the HealthSpring API; only the CMS plan identifier is queried. The supplied NC HMO directory names different plans and is listed in the setup tracker for later expansion.

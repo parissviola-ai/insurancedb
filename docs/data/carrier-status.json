@@ -79,14 +79,14 @@
     },
     {
       "name": "HealthSpring",
-      "phase": "Research",
-      "scope": "HCSC-owned Medicare business \u00b7 2027 Medicare Advantage research",
-      "availability": "Official shopping site and CMS confirm 2027 True Choice (PPO) H7849-113-001 for ZIP 28262, Mecklenburg County NC. Not imported into plan comparison.",
-      "benefits": "Exact 2027 Summary of Benefits and Evidence of Coverage downloaded and plan ID verified. Not imported.",
-      "medications": "Official 2027 MAPD formulary 00027063 explicitly lists H7849-113-001; downloaded. Not imported.",
-      "providers": "Public API accessible on port 8003; historical CMS plan-to-network references found. 2027 network mapping still unverified; not integrated. Official 2027 NC PPO PDF available.",
-      "connection": "Public HealthSpring FHIR on port 8003 successfully returned InsurancePlan and PractitionerRole without authentication. Exhaustive current plan catalog: 618 records, with 2025 and 2026 periods only; no 2027 plan record found. Port 8000 still denied access. Cigna commercial endpoint is separate.",
-      "next_step": "Import verified 2027 documents and confirm when the public directory will publish 2027 InsurancePlan/network records before enabling 2027 coverage checks.",
+      "phase": "Partially connected",
+      "scope": "2027 Medicare Advantage \u00b7 former Cigna Medicare \u00b7 NC True Choice pilot",
+      "availability": "True Choice (PPO) H7849-113-001 imported for its 11 official NC counties. ZIP 28262 includes Mecklenburg and Cabarrus; confirm the county. Other HealthSpring plans/states are not imported.",
+      "benefits": "Official 2027 Summary of Benefits and Evidence of Coverage linked; premium, dental, medical maximum, specialist, hospital and vision amounts imported with conditions. OTC and routine transportation amounts remain unverified; routine hearing aids are not covered.",
+      "medications": "2,624 formulary candidates imported from the official 2027 MAPD formulary 00027063, including captured restrictions and preferred 30-day retail tier costs. Source entries may group strengths/forms; exact coverage requires review.",
+      "providers": "Official 2027 NC PPO PDF linked to True Choice. Public directory responds on port 8003, but no 2027 InsurancePlan records were found. Manual provider/facility selections export for review; live coverage checks remain unverified.",
+      "connection": "Public plan lookup prepared with exact CMS segment and full-year validation. It checks for 2027 records when providers are entered and rejects historical mappings. Current public catalog has 618 records dated 2025/2026. Browser CORS tested; no authentication required for tested requests.",
+      "next_step": "Confirm availability of 2027 API plan/network records, then validate exact-office checks. Extend verified documents to the remaining HealthSpring plans and states.",
       "links": [
         {
           "label": "HealthSpring connection instructions",
@@ -123,6 +123,10 @@
         {
           "label": "Working public FHIR InsurancePlan documentation",
           "url": "https://data.healthspring.healthlx.com:8003/swagger-ui/?page=InsurancePlan"
+        },
+        {
+          "label": "2027 NC HMO directory \u2014 other plans, not imported",
+          "url": "https://www.healthspring.com/static/docs/medicare/plans/2027/provider-pharmacy-directory-north-carolina-hmo.pdf"
         }
       ]
     },
@@ -153,13 +157,13 @@
     {
       "name": "Cigna",
       "phase": "Research",
-      "scope": "Separate Cigna commercial business; do not use as HealthSpring Medicare source",
+      "scope": "Cigna Medicare requests use HealthSpring; separate commercial directory is not part of this Medicare integration",
       "availability": "Not imported.",
       "benefits": "Not imported.",
       "medications": "Not imported.",
       "providers": "Public directory responds; not integrated into the dashboard.",
       "connection": "Official Cigna Provider Directory documentation says no authorization required. Production metadata and sample InsurancePlan requests succeeded; inspected records were commercial products, not verified 2027 Medicare plans.",
-      "next_step": "Determine whether any requested Cigna commercial products are in scope. Keep HealthSpring Medicare on its separate official endpoint.",
+      "next_step": "Use HealthSpring (formerly Cigna Medicare) in the dashboard. No separate Cigna Medicare carrier is needed.",
       "links": [
         {
           "label": "Official Cigna directory documentation",
