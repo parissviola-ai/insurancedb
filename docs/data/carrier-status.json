@@ -1,10 +1,10 @@
 {
-  "updated_on": "2026-10-14",
+  "updated_on": "2026-10-15",
   "carriers": [
     {
       "name": "Devoted Health",
       "phase": "Connected",
-      "scope": "2027 Medicare Advantage · 15 target states",
+      "scope": "2027 Medicare Advantage \u00b7 15 target states",
       "availability": "442 plans imported with county availability and prepared ZIP lookup.",
       "benefits": "Official benefit documents imported; unresolved amounts stay unverified.",
       "medications": "Formulary candidates, captured restrictions and source-listed costs imported. Exact drug coverage requires review.",
@@ -21,7 +21,7 @@
     {
       "name": "Wellcare",
       "phase": "Partially connected",
-      "scope": "2027 Medicare Advantage · North Carolina live; 15-state inventory researched",
+      "scope": "2027 Medicare Advantage \u00b7 North Carolina live; 15-state inventory researched",
       "availability": "Seven NC plans imported. Research inventory: 151 state/plan/segment records across 15 states; 124 network candidates and 27 unmatched. CMS release lists only PDP in AL, TN and VA.",
       "benefits": "Seven NC plans: official benefits and coverage documents imported. Other states pending.",
       "medications": "Four NC formularies imported as candidates with preferred retail cost schedules. Patriot Giveback has no included Part D.",
@@ -47,8 +47,8 @@
       "benefits": "Uploaded 2027 FL Plan Highlights reviewed for H1045-059-000. Not imported; Summary of Benefits/Evidence of Coverage still needed.",
       "medications": "Not imported.",
       "providers": "Not connected.",
-      "connection": "Third-party API listing found; endpoint unavailable from this environment. Linked UHC documentation displayed “Coming soon” to project owner. No working integration verified.",
-      "next_step": "Research paused at project owner’s request while Molina is investigated.",
+      "connection": "Third-party API listing found; endpoint unavailable from this environment. Linked UHC documentation displayed \u201cComing soon\u201d to project owner. No working integration verified.",
+      "next_step": "Research paused at project owner\u2019s request while Molina is investigated.",
       "links": [
         {
           "label": "Official Medicare plan website",
@@ -59,7 +59,7 @@
     {
       "name": "Molina",
       "phase": "Research",
-      "scope": "2027 Medicare Advantage · KY, NY, OH, SC, TX researched",
+      "scope": "2027 Medicare Advantage \u00b7 KY, NY, OH, SC, TX researched",
       "availability": "CMS lists 16 state/plan/segment records in these five states, all D-SNP. Includes Passport Advantage and Senior Whole Health branding. Not yet imported into the dashboard.",
       "benefits": "Not imported.",
       "medications": "Not imported.",
@@ -80,13 +80,13 @@
     {
       "name": "HealthSpring",
       "phase": "Research",
-      "scope": "HCSC-owned Medicare business · 2027 Medicare Advantage research",
-      "availability": "CMS identifies 2027 HealthSpring plans under Health Care Service Corporation. NC examples include HealthSpring True Choice PPO H7849-113 with multiple segments. Not imported.",
-      "benefits": "Not imported.",
-      "medications": "Not imported.",
-      "providers": "Production resource access unresolved; not integrated.",
-      "connection": "Official HealthSpring guide confirms Medicare Advantage provider searches and says no authentication is required. Getting Started displays the literal base-URL placeholder providerDirectoryEndpoint. Implementation-guide server metadata responds, but anonymous provider/plan searches return Access denied or unsupported-filter errors. The separately listed devportal endpoint is a synthetic-data sandbox and was blocked by the environment proxy.",
-      "next_step": "Select a specific 2027 CMS plan/segment by ZIP, obtain official benefits/formulary and provider search, and resolve the production API documentation mismatch.",
+      "scope": "HCSC-owned Medicare business \u00b7 2027 Medicare Advantage research",
+      "availability": "Official shopping site and CMS confirm 2027 True Choice (PPO) H7849-113-001 for ZIP 28262, Mecklenburg County NC. Not imported into plan comparison.",
+      "benefits": "Exact 2027 Summary of Benefits and Evidence of Coverage downloaded and plan ID verified. Not imported.",
+      "medications": "Official 2027 MAPD formulary 00027063 explicitly lists H7849-113-001; downloaded. Not imported.",
+      "providers": "Official 2027 NC PPO directory names True Choice and Mecklenburg County. Live provider-search link returned 404; no API network identifier verified.",
+      "connection": "Official shopping service successfully returned the exact 2027 CMS contract/PBP/segment and document URLs. Documented HealthSpring FHIR plan request still returned 403 Access denied. Cigna upload and 1,000 additional commercial-source records did not establish HealthSpring Medicare mapping.",
+      "next_step": "Import verified plan documents; obtain a working Medicare provider-search URL or corrected public FHIR production endpoint before enabling live network checks.",
       "links": [
         {
           "label": "HealthSpring connection instructions",
@@ -99,6 +99,26 @@
         {
           "label": "HealthSpring ownership and history",
           "url": "https://www.healthspring.com/about-us"
+        },
+        {
+          "label": "Verified 2027 True Choice plan",
+          "url": "https://shop.healthspringmedicare.com/28262/37119/plan/1TT7MDD1LZ?planYear=2027"
+        },
+        {
+          "label": "2027 Summary of Benefits",
+          "url": "https://www.healthspring.com/static/docs/medicare/plans/2027/sb-h7849-113-001.pdf"
+        },
+        {
+          "label": "2027 Evidence of Coverage",
+          "url": "https://www.healthspring.com/static/docs/medicare/plans/2027/eoc-h7849-113-001.pdf"
+        },
+        {
+          "label": "2027 MAPD formulary",
+          "url": "https://www.healthspring.com/static/docs/medicare/plans/2027/formulary-mapd.pdf"
+        },
+        {
+          "label": "2027 North Carolina PPO directory",
+          "url": "https://www.healthspring.com/static/docs/medicare/plans/2027/provider-pharmacy-directory-north-carolina-ppo.pdf"
         }
       ]
     },
