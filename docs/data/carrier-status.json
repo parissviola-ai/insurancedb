@@ -80,13 +80,13 @@
     {
       "name": "HealthSpring",
       "phase": "Partially connected",
-      "scope": "2027 source documents \u00b7 15 target states; NC True Choice pilot in comparisons",
-      "availability": "146 MA state/plan-segment entries collected across 12 target states with CMS/PDF county checks. LA, MI and NY have only standalone PDP entries in the reviewed HealthSpring catalog and CMS release. Comparison remains the one 11-county NC True Choice pilot.",
-      "benefits": "143 unique official EOC PDFs collected (162 state/document entries). Searchable library and MA segment CSV available. PA H3949-052 county summary omits Lehigh/Northampton; printed EOC and CMS agree and the discrepancy is noted. Full benefit comparisons beyond the NC pilot are pending.",
-      "medications": "Six official 2027 shared formularies collected: 15,304 extracted candidates. Explicit applicability verifies 139 MA state/segments; seven MA-only entries have no included Part D. Assurance/Extra PDP lists remain separate. Only the NC pilot participates in medication comparison so far.",
-      "providers": "38 official 2027 regional PDF directories indexed across all 12 target states with HealthSpring MA directories, including HMO/PPO. Choose a regional source; suggestions load locally on demand. Partial extraction includes provider offices and hospitals, with source page/date. Only the NC True Choice PPO attachment is verified for the comparison; other source-to-plan mappings remain unverified. LA/MI/NY have no listed MA directory in the reviewed catalog.",
-      "connection": "Public plan lookup prepared with exact CMS segment and full-year validation. It checks for 2027 records when providers are entered and rejects historical mappings. Current public catalog has 618 records dated 2025/2026. Browser CORS tested; no authentication required for tested requests.",
-      "next_step": "Extend benefit comparisons and verify directory-to-plan connections for additional plan/segments. True Choice OTC and annual routine ride amounts remain unverified; API 2027 network data is still pending.",
+      "scope": "Former Cigna Medicare \u00b7 2027 documents across 15 target states; one NC plan in comparison",
+      "availability": "146 Medicare Advantage state/plan-segment entries checked against CMS and official PDFs across 12 target states. LA, MI and NY have only standalone PDP entries in the reviewed sources. Plan comparison currently includes True Choice H7849-113-001 in its 11 NC counties.",
+      "benefits": "143 unique EOC PDFs collected; searchable library and Excel-compatible plan/segment CSV published. True Choice benefit amounts are imported with conditions; its OTC allowance and annual routine rides remain unverified, not zero. Other plan benefit comparisons are pending. PA H3949-052 website county metadata differs, but its printed EOC and CMS agree.",
+      "medications": "Six 2027 shared formularies collected with 15,304 candidate entries. Explicit PDF applicability links 139 MA state/segments; seven have no included Part D. Assurance/Extra standalone PDP lists remain separate. Medication comparison currently uses the NC True Choice formulary and plan-listed tier costs; exact coverage requires review.",
+      "providers": "All 38 available regional HMO/PPO directories indexed across the 12 MA target states. Dated PDF suggestions include office details and source pages; extraction is partial. Select the correct regional directory. Only the NC True Choice PPO connection is verified for comparison; other directory-to-plan links and all live network coverage remain unverified. EyeMed locator is linked in results and Excel.",
+      "connection": "Public FHIR on port 8003 works without authentication for tested requests. Last inspected catalog contained 618 plans dated 2025/2026; no 2027 mapping found. The connector checks exact plan/segment and full-year dates and rejects historical mappings. PDF suggestions work independently of the live API.",
+      "next_step": "Import benefit schedules for additional plan/segments, verify their exact directory connections, and recheck the API for 2027 network records. Confirm True Choice OTC/routine-transportation benefit amounts before using them in ranking.",
       "links": [
         {
           "label": "HealthSpring connection instructions",
@@ -125,7 +125,7 @@
           "url": "https://data.healthspring.healthlx.com:8003/swagger-ui/?page=InsurancePlan"
         },
         {
-          "label": "2027 NC HMO directory \u2014 other plans, not imported",
+          "label": "Indexed 2027 North Carolina HMO directory (PDF)",
           "url": "https://www.healthspring.com/static/docs/medicare/plans/2027/provider-pharmacy-directory-north-carolina-hmo.pdf"
         },
         {
@@ -135,6 +135,22 @@
         {
           "label": "Official 2027 formulary catalog",
           "url": "https://www.healthspring.com/medicare/member-resources/drug-list-formulary#2027"
+        },
+        {
+          "label": "Search HealthSpring EOCs and formularies",
+          "url": "https://parissviola-ai.github.io/insurancedb/healthspring-documents.html"
+        },
+        {
+          "label": "Download MA plan/segment CSV for Excel",
+          "url": "https://parissviola-ai.github.io/insurancedb/data/healthspring-ma-segments.csv"
+        },
+        {
+          "label": "Official regional directory catalog",
+          "url": "https://www.healthspring.com/medicare/member-resources/provider-pharmacy-directories"
+        },
+        {
+          "label": "HealthSpring EyeMed locator",
+          "url": "https://eyedoclocator.eyemedvisioncare.com/healthspring/en-us"
         }
       ]
     },
@@ -164,14 +180,14 @@
     },
     {
       "name": "Cigna",
-      "phase": "Research",
-      "scope": "Cigna Medicare requests use HealthSpring; separate commercial directory is not part of this Medicare integration",
-      "availability": "Not imported.",
+      "phase": "Paused",
+      "scope": "Medicare tracked under HealthSpring; separate Cigna commercial integration deferred",
+      "availability": "Use the HealthSpring entry for former Cigna Medicare plans. No separate Cigna Medicare inventory is needed.",
       "benefits": "Not imported.",
       "medications": "Not imported.",
       "providers": "Public directory responds; not integrated into the dashboard.",
       "connection": "Official Cigna Provider Directory documentation says no authorization required. Production metadata and sample InsurancePlan requests succeeded; inspected records were commercial products, not verified 2027 Medicare plans.",
-      "next_step": "Use HealthSpring (formerly Cigna Medicare) in the dashboard. No separate Cigna Medicare carrier is needed.",
+      "next_step": "Continue Medicare setup under HealthSpring. Revisit Cigna separately only if commercial products are added to scope.",
       "links": [
         {
           "label": "Official Cigna directory documentation",
