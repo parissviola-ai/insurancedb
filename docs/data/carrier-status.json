@@ -174,13 +174,13 @@
     {
       "name": "CareFirst",
       "phase": "Research",
-      "scope": "Proposed private, single-user directory integration \u00b7 usage clarification pending",
+      "scope": "Private single-user directory integration proposed \u00b7 request submitted; response pending",
       "availability": "No plan inventory imported. The supplied specification has no InsurancePlan operation.",
       "benefits": "Not imported.",
       "medications": "Not imported.",
       "providers": "Not connected. Proposed design: sign-in required, live provider/facility searches through a private backend, and no persistent directory-response storage. Architecture is proposed, not implemented.",
-      "connection": "Specification confirms x-api-subscription-key access at https://api-pit.carefirst.com/extfhirproviderdir/v1. Anonymous Practitioner lookup returned 401; InsurancePlan is not documented. Reviewed terms restrict third-party use and redistribution. Email drafted to clarify approval for a single-user client tool; sending and CareFirst approval are not confirmed. No CareFirst directory records have been imported into the public dataset or exports.",
-      "next_step": "Send the drafted use-case clarification email. Obtain CareFirst confirmation for private single-user display, production/Medicare/2027 scope, subscription access, and exact CMS plan-to-network mapping. Then implement private backend authentication and protected key handling; keep CareFirst data out of public datasets and Excel exports.",
+      "connection": "CareFirst confirmed receipt of the request on October 14, 2026 and will respond by email; no turnaround estimate was provided. Support: DeveloperPortalSupport@carefirst.com. Usage approval and subscription access remain unconfirmed. The documented API requires x-api-subscription-key; Medicare/2027 scope and exact CMS plan-to-network mapping remain unverified. No CareFirst records are included in public datasets or exports.",
+      "next_step": "Await CareFirst\u2019s email response about the private single-user use case, data-display/storage/export permissions, production subscription, Medicare/2027 data and CMS network mapping. Use the saved correlation ID for follow-up. After confirmation, implement the private backend and sign-in; the current architecture remains a proposal.",
       "links": [
         {
           "label": "CareFirst Provider Directory API documentation",
