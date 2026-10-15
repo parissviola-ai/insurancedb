@@ -282,16 +282,32 @@
       "name": "Highmark Wholecare",
       "phase": "Research",
       "scope": "HMHS directory access verified · exact 2027 Wholecare applicability under review",
-      "availability": "Not imported.",
-      "benefits": "Not imported.",
+      "availability": "CMS 2027 confirms four PA D-SNP plan/segments: Diamond H5932-001-000 and Ruby H5932-009-000 each serve 57 counties; Diamond H5932-012-000 and Ruby H5932-013-000 each serve Bucks, Chester, Delaware, Montgomery and Philadelphia. Separate PBP IDs, not interchangeable segment IDs. Not yet imported into comparison.",
+      "benefits": "Official 2027 Summaries of Benefits downloaded for all four plans. Combined maximum yearly dental allowance: Diamond 001/012 $3,000; Ruby 009/013 $2,000, subject to source conditions including prior authorization. Older-year third-party ranges are not used. Benefits not yet imported.",
       "medications": "Not imported.",
-      "providers": "Authenticated plan searches return network Organization references. Sample Medicare-name results were National Medicare Advantage Dental records without coverage periods or CMS identifiers. These do not verify a 2027 Wholecare medical network. A Wholecare-name query returned zero in HMPAMS and a server error in HM; neither establishes absence from the full catalog.",
+      "providers": "Authenticated plan searches return network Organization references. Sample Medicare-name results were National Medicare Advantage Dental records without coverage periods or CMS identifiers. These do not verify a 2027 Wholecare medical network. A Wholecare-name query returned zero in HMPAMS and a server error in HM; neither establishes absence from the full catalog. Targeted Assured-name searches in HM/HMPAMS and an HM identifier search for H5932-009-000 returned empty bundles; these limited searches do not establish absence from all partitions.",
       "connection": "The owner confirmed application approval and enabled the required API type. Authenticated metadata and InsurancePlan requests now return HTTP 200 using the documented API-key header. Initial authorization failure is resolved. API credentials remain outside the public repository and dashboard. No carrier records are imported into comparison yet.",
       "next_step": "Identify the appropriate Highmark Wholecare Medicare partition and an exact 2027 CMS plan/segment record, keeping dental networks separate from medical networks. Then verify provider/facility network and office references. Any live dashboard connection must keep the API key in a private backend.",
       "links": [
         {
           "label": "HMHS provider-directory API portal",
           "url": "https://cmsapiportal.hmhs.com/api-details?apiId=696bf543-f205-428f-8065-b3ca967935c7&managerId=1&swaggerVersion=2.0&type=rest&usage=api&Itemid=192&catalogModuleId=119#overview"
+        },
+        {
+          "label": "Official 2027 Summary of Benefits H5932-001-000",
+          "url": "https://producer.highmark.com/content/dam/highmark/en/healthco/shopx/dsnp/2027-resources/pa/SB_H5932001000_2027_English.pdf"
+        },
+        {
+          "label": "Official 2027 Summary of Benefits H5932-009-000",
+          "url": "https://producer.highmark.com/content/dam/highmark/en/healthco/shopx/dsnp/2027-resources/pa/SB_H5932009000_2027_English.pdf"
+        },
+        {
+          "label": "Official 2027 Summary of Benefits H5932-012-000",
+          "url": "https://producer.highmark.com/content/dam/highmark/en/healthco/shopx/dsnp/2027-resources/pa/SB_H5932012000_2027_English.pdf"
+        },
+        {
+          "label": "Official 2027 Summary of Benefits H5932-013-000",
+          "url": "https://producer.highmark.com/content/dam/highmark/en/healthco/shopx/dsnp/2027-resources/pa/SB_H5932013000_2027_English.pdf"
         }
       ]
     }
