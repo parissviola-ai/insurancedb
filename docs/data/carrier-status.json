@@ -215,14 +215,14 @@
     },
     {
       "name": "Excellus BlueCross BlueShield",
-      "phase": "Research",
-      "scope": "New York Medicare integration research · mapping question sent to support; response pending",
-      "availability": "No Excellus plans imported. Sample Medicare-related InsurancePlan records include internal plan identifiers and network references, but their exact CMS plan/segment and 2027 coverage period remain unverified.",
-      "benefits": "Not imported.",
-      "medications": "Official 2027 individual Medicare Blue Choice formulary verified (ID 27174; updated October 1, 2026), with separate D-SNP/group sources. Not imported; a drug formulary API has not been verified.",
-      "providers": "Anonymous Practitioner searches and PractitionerRole lookup succeeded. Roles contain network and office references. Exact 2027 plan-specific provider/facility checks are not connected. Official 2027 plan-named provider/pharmacy PDFs are accessible; not indexed in the dashboard.",
+      "phase": "Partially connected",
+      "scope": "2027 NY individual MA · plans 028, 029 and 030 · document-based comparison",
+      "availability": "Three exact CMS plan/segments H3351-028-000, H3351-029-000 and H3351-030-000 imported for their 13 NY counties. CMS county availability and premiums verified against official 2027 documents. Missing ZIP mapping requires manual NY/county confirmation.",
+      "benefits": "Official 2027 Summaries of Benefits and EOCs linked. Premium, medical maximum, specialist, modeled hospital, eyewear, Advanced hearing and transportation metrics imported. Routine transportation is explicitly not covered. Comprehensive dental is an optional $35/month add-on; no base dental dollar allowance or OTC allowance assumed.",
+      "medications": "2,435 extracted 2027 formulary candidates searchable by name, with tiers, captured restrictions and PDF pages. Preferred network retail 30-day initial-coverage tier costs included with deductible/pharmacy conditions. Suggestions are not confirmation of exact strength/form or coverage.",
+      "providers": "13,785 dated PDF office candidates indexed, including 469 facility listings. Name suggestions and exact selected office/source appear in comparison and Excel. Extraction is partial; NPIs are not supplied by this PDF index. Confirm current participation. No live 2027 network checks.",
       "connection": "Official guidance states public access APIs require neither app registration nor end-user authentication/consent; Patient Access is separate. Base https://fhir.excellusbcbs.com/fhir/api tested successfully for metadata, provider search, roles, InsurancePlan read and network Organization read. A name=Medicare plan search returned 100 sampled records; none in that page had coverage periods or root CMS identifiers. A supplied-format CMS identifier search was rejected; this does not establish absence from the entire catalog. The project owner submitted the CMS-to-internal-plan/network mapping question to Excellus support; response pending. No response timeframe has been provided.",
-      "next_step": "Await Excellus support guidance on mapping exact 2027 individual CMS contract/PBP/segment IDs to InsurancePlan and network Organization references, including how to distinguish employer/group records. Official 2027 PDFs can support a separate document-based integration; no plan-specific live coverage connection is established.",
+      "next_step": "Await support response on exact 2027 individual CMS-to-InsurancePlan/network mapping and group-plan distinction. Review PDF extraction and complete missing ZIP/county mappings. Live network integration remains pending.",
       "links": [
         {
           "label": "Excellus public API documentation",
@@ -243,6 +243,14 @@
         {
           "label": "Official provider/pharmacy directories",
           "url": "https://www.excellusbcbs.com/find-a-doctor/directories"
+        },
+        {
+          "label": "2027 Summary of Benefits 028-029",
+          "url": "https://www.excellusbcbs.com/documents/d/global/exc-mdm-mdp-summary-of-benefits-028-029-odd"
+        },
+        {
+          "label": "2027 Summary of Benefits 030-031",
+          "url": "https://www.excellusbcbs.com/documents/d/global/exc-mdm-mdp-summary-of-benefits-030-031-odd"
         }
       ]
     },

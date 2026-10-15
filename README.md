@@ -198,3 +198,18 @@ Rebuild with `python import_healthspring_providers.py --pdf /path/to/provider-ph
 Refresh with `python index_healthspring_directories.py --cache /tmp/healthspring-all-directories` (PyMuPDF and pdftotext required). Each PDF has its own generated JSON index and SHA-256 manifest under `docs/data/healthspring-directories/`; cached indexes are reused only when PDF hashes match. Failed directories remain flagged for review, never silently represented as empty coverage. No failed directories remain in this snapshot. A selected state's directory options come from the official catalog. Representatives choose the regional HMO/PPO source; NC defaults to the already verified True Choice PPO source. Only the selected directory is loaded, with at most three indexes cached in browser memory. Source names/date/page stay attached to selections. Other PDF-to-plan attachments remain unset; matching a directory name/state is not enough to infer coverage for every plan in that state.
 
 The carrier selector now says “HealthSpring (formerly Cigna Medicare)” without “pilot”; the comparison dataset still clearly discloses its current NC True Choice scope. True Choice OTC allowance and annual free routine rides remain unverified because no amount was confirmed in the checked plan sources. They are not stored as zero. Ambulance and transplant travel benefits do not establish an annual routine-ride count. Comparison cells and Excel notes preserve these distinctions.
+
+### Excellus 2027 document integration
+
+`python import_excellus.py --cache /tmp/excellus-cache` rebuilds the three individual
+NY plans H3351-028/029/030 (segment 000), the shared formulary candidates and the
+partial provider/facility index from official Excellus PDFs and the CMS landscape.
+Remove a cached file to retrieve a fresh copy. Source hashes and PDF pages are
+retained. Run `node tests/excellus.mjs` after refreshing.
+
+The integration uses dated directory listings, not live network confirmation.
+The PDF index has no NPIs; name suggestions and manual entry are available.
+Do not infer exclusions from missing extracted records. Where the prepared ZIP
+lookup is missing, select NY and confirm the county manually. Optional dental
+costs extra and is not scored as a base allowance; OTC remains unverified. Exact
+CMS-to-internal-FHIR network mapping is awaiting Excellus support.

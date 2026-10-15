@@ -1,23 +1,23 @@
-import {pdfMatches} from './healthspring-providers.js?v=healthspring-all-directories';
-import {providers} from './provider.js?v=healthspring-all-directories';
-import {healthspringMapping} from './healthspring.js?v=healthspring-all-directories';
+import {pdfMatches} from './healthspring-providers.js?v=excellus-2027';
+import {providers} from './provider.js?v=excellus-2027';
+import {healthspringMapping} from './healthspring.js?v=excellus-2027';
 import {rankPlans,priorityKeys} from './ranking.js';
 import {workbook} from './excel.js';
-import {medicationPicker} from './medications.js?v=healthspring-all-directories';
-import {providerPicker} from './provider-picker.js?v=healthspring-all-directories';
+import {medicationPicker} from './medications.js?v=excellus-2027';
+import {providerPicker} from './provider-picker.js?v=excellus-2027';
 const form=document.querySelector('#search'); const results=document.querySelector('#results');
 const state=document.querySelector('#state');state.append(new Option('Select state',''));for(const code of ['NC','SC','GA','FL','AL','TN','VA','KY','LA','TX','OH','PA','DE','MI','NY'])state.append(new Option(code,code));
 const business=form.elements.business;business.replaceChildren(new Option('Medicare Advantage','Medicare Advantage'));
-const carrier=form.elements.carrier;carrier.replaceChildren(new Option('Devoted Health','Devoted Health'),new Option('Wellcare — North Carolina','Wellcare'),new Option('HealthSpring (formerly Cigna Medicare)','HealthSpring'));
+const carrier=form.elements.carrier;carrier.replaceChildren(new Option('Devoted Health','Devoted Health'),new Option('Wellcare — North Carolina','Wellcare'),new Option('HealthSpring (formerly Cigna Medicare)','HealthSpring'),new Option('Excellus — New York (028/029/030)','Excellus'));
 carrier.addEventListener('change',()=>{request?.abort();comparisonState?.container.scrollObserver?.disconnect();comparisonState=null;updateCounty(false);results.replaceChildren(el('p','Carrier changed. Search again to compare plans.'));});
 const county=form.elements.county;
 function el(tag,text,cls) {const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n;}
 function link(parent,label,url) {if(!/^https:\/\//.test(url))return;const n=el('a',label);n.href=url;n.target='_blank';n.rel='noopener noreferrer';parent.append(n);}
 let dataPromise;let request;
 async function data() {
-  if(!dataPromise) dataPromise=Promise.all(['plans','zip-counties','formularies','wellcare','healthspring','healthspring-documents'].map(async name=> {
-    const r=await fetch('./data/'+name+'.json?v=healthspring-all-directories');if(!r.ok)throw new Error('Prepared plan data could not be loaded. Please retry.');return r.json();
-  })).then(([inventory,zipMap,formularies,wellcare,healthspring,healthspringDocuments])=>[{...inventory,healthspring_documents:healthspringDocuments.documents,carrier_counties:{Wellcare:wellcare.county_options || [],HealthSpring:healthspring.county_options || []},plans:[...inventory.plans,...wellcare.plans,...healthspring.plans]},zipMap,{...formularies,...wellcare.formularies,...healthspring.formularies}]).catch(e=>{dataPromise=null;throw e;});
+  if(!dataPromise) dataPromise=Promise.all(['plans','zip-counties','formularies','wellcare','healthspring','healthspring-documents','excellus'].map(async name=> {
+    const r=await fetch('./data/'+name+'.json?v=excellus-2027');if(!r.ok)throw new Error('Prepared plan data could not be loaded. Please retry.');return r.json();
+  })).then(([inventory,zipMap,formularies,wellcare,healthspring,healthspringDocuments,excellus])=>[{...inventory,healthspring_documents:healthspringDocuments.documents,carrier_counties:{Wellcare:wellcare.county_options || [],HealthSpring:healthspring.county_options || [],Excellus:excellus.county_options || []},plans:[...inventory.plans,...wellcare.plans,...healthspring.plans,...excellus.plans]},zipMap,{...formularies,...wellcare.formularies,...healthspring.formularies,...excellus.formularies}]).catch(e=>{dataPromise=null;throw e;});
   return dataPromise;
 }
 const picker=medicationPicker(data);
@@ -157,7 +157,7 @@ async function updateCounty(autoState=true) {
     }
     if(zipStates.length>1 && !state.value){county.replaceChildren(new Option('Choose a state for this ZIP',''));return;}
     const mappedCounties=(zipMap[zip] || []).filter(c=>c.state===state.value);
-    const manualCounty=carrier.value!=='Devoted Health' && state.value==='NC' && !mappedCounties.length;
+    const manualCounty=carrier.value!=='Devoted Health' && ((carrier.value==='Excellus' && state.value==='NY') || state.value==='NC') && !mappedCounties.length;
     const counties=manualCounty?inventory.carrier_counties[carrier.value] || []:mappedCounties;
     county.replaceChildren(new Option(manualCounty?'ZIP mapping unavailable — confirm county':counties.length?'Select county':'ZIP not found in selected state',''));
     for(const c of counties)county.append(new Option(c.name,c.code));
@@ -180,18 +180,18 @@ form.addEventListener('submit',async event=>{
     if(people.length>3 || drugs.length>10)throw new Error('Search up to 3 providers/facilities and 10 medications at a time.');
     const [inventory,zipMap,formularies]=await data();if(signal.aborted)return;
     const mappedCounties=(zipMap[zip] || []).filter(c=>c.state===state.value);
-    const manualCounty=carrier.value!=='Devoted Health' && state.value==='NC' && !mappedCounties.length;
+    const manualCounty=carrier.value!=='Devoted Health' && ((carrier.value==='Excellus' && state.value==='NY') || state.value==='NC') && !mappedCounties.length;
     const counties=manualCounty?inventory.carrier_counties[carrier.value] || []:mappedCounties;county.replaceChildren(new Option(manualCounty?'ZIP mapping unavailable — confirm county':'Select county',''));
     for(const c of counties)county.append(new Option(c.name,c.code));
     const selected=counties.find(c=>c.code===chosen) || (!manualCounty && counties.length===1?counties[0]:null);
     county.value=selected?.code || '';
     if(!selected) {
-      results.replaceChildren(el('h2','Choose your location'),el('p',counties.length?(manualCounty?'ZIP-to-county mapping is unavailable. Confirm North Carolina and your county, then search again.':'This ZIP crosses county boundaries. Select your county, then search again.'):'This ZIP is not in the prepared lookup for the selected state. No plan availability inferred.'));
+      results.replaceChildren(el('h2','Choose your location'),el('p',counties.length?(manualCounty?'ZIP-to-county mapping is unavailable. Confirm the selected state and your county, then search again.':'This ZIP crosses county boundaries. Select your county, then search again.'):'This ZIP is not in the prepared lookup for the selected state. No plan availability inferred.'));
       if(counties.length)county.focus();return;
     }
     const plans=inventory.plans.filter(p=>p.carrier===carrier.value && p.state===state.value && p.counties.includes(selected.code) && (!p.verified_zips || p.verified_zips.includes(zip)) && (form.elements.special_needs.checked || !p.special_needs));
     results.replaceChildren(el('h2',`${plans.length} plans · ${selected.name} County`),el('p',`${carrier.value!=='Devoted Health'?'Official CMS 2027 county availability.':'Official 2027 county mapping.'} Data refreshed ${(carrier.value!=='Devoted Health'?plans[0]?.documents[0]?.retrieved_at || inventory.snapshot.retrieved_at:inventory.snapshot.retrieved_at).slice(0,10)}. Confirm eligibility and enrollment requirements.`));
-    if(!plans.length)results.append(el('p',carrier.value==='Devoted Health'?'Devoted’s published mapping lists no 2027 plans for this county.':`No imported ${carrier.value} plans match this county and eligibility filter. ${carrier.value==='HealthSpring'?'Only True Choice H7849-113-001 in its 11 NC counties has been added.':'Other states have not been added yet.'}`));
+    if(!plans.length)results.append(el('p',carrier.value==='Devoted Health'?'Devoted’s published mapping lists no 2027 plans for this county.':`No imported ${carrier.value} plans match this county and eligibility filter. ${carrier.value==='HealthSpring'?'Only True Choice H7849-113-001 in its 11 NC counties has been added.':carrier.value==='Excellus'?'Only plans 028, 029 and 030 in their 13 NY counties have been added.':'Other states have not been added yet.'}`));
     if(manualCounty)results.append(el('p','County selected manually. ZIP-to-county relationship remains unverified. Confirm residence before enrollment.','notice'));
     const comparison=el('section',undefined,'panel');results.append(comparison);
     comparisonState={container:comparison,plans,drugs,drugSelections,people,providerSelections,providerStatus:new Map(),coverage:[],zip,county:selected.name,state:state.value,carrier:carrier.value,manualCounty,snapshot:carrier.value!=='Devoted Health'?plans[0]?.documents[0]?.retrieved_at || inventory.snapshot.retrieved_at:inventory.snapshot.retrieved_at,includeSpecial:form.elements.special_needs.checked};renderComparison();
@@ -218,8 +218,8 @@ form.addEventListener('submit',async event=>{
       results.append(library);
     }
     if(people.length && plans.length) {
-      const status=el('p',carrier.value==='HealthSpring'?'Checking availability of 2027 plan network data…':carrier.value==='Wellcare'?'Provider checks require official directory review.':'Checking live provider directory…');results.prepend(status);
-      let healthspringNote;
+      const status=el('p',carrier.value==='Excellus'?'Reviewing dated Excellus PDF listings…':carrier.value==='HealthSpring'?'Checking availability of 2027 plan network data…':carrier.value==='Wellcare'?'Provider checks require official directory review.':'Checking live provider directory…');results.prepend(status);
+      let healthspringNote=carrier.value==='Excellus'?'Excellus results use the September 13, 2026 directory for the listed 2027 plans. Confirm current participation; live network checks are not connected.':undefined;
       if(carrier.value==='HealthSpring'){
         try{healthspringNote=(await healthspringMapping(plans[0],signal)).message;}
         catch(e){if(signal.aborted)return;healthspringNote='HealthSpring directory unavailable. Provider and facility coverage remains unverified; review the official directory.';}
@@ -227,7 +227,7 @@ form.addEventListener('submit',async event=>{
       }
       try {
         for(const term of people) {
-          const found=carrier.value!=='Devoted Health'?{matches:carrier.value==='HealthSpring'?pdfMatches(providerSelections.find(p=>p.label===term),plans):new Map(plans.map(p=>[p.id,[]])),truncated:true}:await providers(term,plans,signal,providerSelections.find(p=>p.label===term));if(signal.aborted)return;
+          const found=carrier.value!=='Devoted Health'?{matches:['HealthSpring','Excellus'].includes(carrier.value)?pdfMatches(providerSelections.find(p=>p.label===term),plans):new Map(plans.map(p=>[p.id,[]])),truncated:true}:await providers(term,plans,signal,providerSelections.find(p=>p.label===term));if(signal.aborted)return;
           for(const plan of plans) {
             const matches=found.matches.get(plan.id);
             comparisonState.coverage.push({plan:plan.name,kind:providerSelections.find(p=>p.label===term)?.kind==='facility'?'Facility':'Provider',term,matches,partial:found.truncated,message:healthspringNote,source_url:providerSelections.find(p=>p.label===term)?.source_url || plan.documents.find(d=>d.kind==='provider_directory')?.url || plan.provider_search_url});
