@@ -1,9 +1,9 @@
-import {providers} from './provider.js?v=healthspring-pilot';
-import {healthspringMapping} from './healthspring.js?v=healthspring-pilot';
+import {providers} from './provider.js?v=healthspring-nc-docs';
+import {healthspringMapping} from './healthspring.js?v=healthspring-nc-docs';
 import {rankPlans,priorityKeys} from './ranking.js';
 import {workbook} from './excel.js';
-import {medicationPicker} from './medications.js?v=healthspring-pilot';
-import {providerPicker} from './provider-picker.js?v=healthspring-pilot';
+import {medicationPicker} from './medications.js?v=healthspring-nc-docs';
+import {providerPicker} from './provider-picker.js?v=healthspring-nc-docs';
 const form=document.querySelector('#search'); const results=document.querySelector('#results');
 const state=document.querySelector('#state');state.append(new Option('Select state',''));for(const code of ['NC','SC','GA','FL','AL','TN','VA','KY','LA','TX','OH','PA','DE','MI','NY'])state.append(new Option(code,code));
 const business=form.elements.business;business.replaceChildren(new Option('Medicare Advantage','Medicare Advantage'));
@@ -14,9 +14,9 @@ function el(tag,text,cls) {const n=document.createElement(tag);if(text!==undefin
 function link(parent,label,url) {if(!/^https:\/\//.test(url))return;const n=el('a',label);n.href=url;n.target='_blank';n.rel='noopener noreferrer';parent.append(n);}
 let dataPromise;let request;
 async function data() {
-  if(!dataPromise) dataPromise=Promise.all(['plans','zip-counties','formularies','wellcare','healthspring'].map(async name=> {
-    const r=await fetch('./data/'+name+'.json?v=healthspring-pilot');if(!r.ok)throw new Error('Prepared plan data could not be loaded. Please retry.');return r.json();
-  })).then(([inventory,zipMap,formularies,wellcare,healthspring])=>[{...inventory,carrier_counties:{Wellcare:wellcare.county_options || [],HealthSpring:healthspring.county_options || []},plans:[...inventory.plans,...wellcare.plans,...healthspring.plans]},zipMap,{...formularies,...wellcare.formularies,...healthspring.formularies}]).catch(e=>{dataPromise=null;throw e;});
+  if(!dataPromise) dataPromise=Promise.all(['plans','zip-counties','formularies','wellcare','healthspring','healthspring-documents'].map(async name=> {
+    const r=await fetch('./data/'+name+'.json?v=healthspring-nc-docs');if(!r.ok)throw new Error('Prepared plan data could not be loaded. Please retry.');return r.json();
+  })).then(([inventory,zipMap,formularies,wellcare,healthspring,healthspringDocuments])=>[{...inventory,healthspring_documents:healthspringDocuments.documents,carrier_counties:{Wellcare:wellcare.county_options || [],HealthSpring:healthspring.county_options || []},plans:[...inventory.plans,...wellcare.plans,...healthspring.plans]},zipMap,{...formularies,...wellcare.formularies,...healthspring.formularies}]).catch(e=>{dataPromise=null;throw e;});
   return dataPromise;
 }
 const picker=medicationPicker(data);
@@ -204,6 +204,13 @@ form.addEventListener('submit',async event=>{
       const providerSection=el('div');card.append(providerSection);sections.set(plan.id,providerSection);
       link(card,'Official provider search',plan.carrier!=='Devoted Health'?plan.provider_search_url:`https://www.devoted.com/search-providers/#filterType=all&p=${encodeURIComponent(plan.name.includes('(PPO')?'PPO':'HMO')}&q=&s=${encodeURIComponent(state.value)}&y=2027`);
       const details=el('details');details.id='plan-'+plan.id;details.append(el('summary',plan.name+' · Plan details'),card);results.append(details);
+    }
+    if(carrier.value==='HealthSpring') {
+      const library=el('details',undefined,'panel');library.append(el('summary','Official 2027 NC coverage documents'));
+      library.append(el('p','These are source documents, not additional comparison results. Other Medicare Advantage plans still need benefit and formulary imports. Assurance Rx is a separate Part D plan, not a Medicare Advantage plan.'));
+      const documents=inventory.healthspring_documents.filter(d=>d.business==='Part D' || d.counties?.includes(selected.name));
+      for(const doc of documents){const row=el('p');link(row,doc.name+(doc.cms_id?' · '+doc.cms_id:' · Part D'),doc.url);library.append(row);}
+      results.append(library);
     }
     if(people.length && plans.length) {
       const status=el('p',carrier.value==='HealthSpring'?'Checking availability of 2027 plan network data…':carrier.value==='Wellcare'?'Provider checks require official directory review.':'Checking live provider directory…');results.prepend(status);

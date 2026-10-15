@@ -82,7 +82,7 @@
       "phase": "Partially connected",
       "scope": "2027 Medicare Advantage \u00b7 former Cigna Medicare \u00b7 NC True Choice pilot",
       "availability": "True Choice (PPO) H7849-113-001 imported for its 11 official NC counties. ZIP 28262 includes Mecklenburg and Cabarrus; confirm the county. Other HealthSpring plans/states are not imported.",
-      "benefits": "Official 2027 Summary of Benefits and Evidence of Coverage linked; premium, dental, medical maximum, specialist, hospital and vision amounts imported with conditions. OTC and routine transportation amounts remain unverified; routine hearing aids are not covered.",
+      "benefits": "Official 2027 Summary of Benefits and Evidence of Coverage linked; premium, dental, medical maximum, specialist, hospital and vision amounts imported with conditions. OTC and routine transportation amounts remain unverified; routine hearing aids are not covered. Coverage library: 14 official NC EOCs downloaded and checked; 13 MA segment/county lists match CMS, plus a shared Assurance Rx PDP document. Library links are filtered by selected county; only True Choice is in comparison.",
       "medications": "2,624 formulary candidates imported from the official 2027 MAPD formulary 00027063, including captured restrictions and preferred 30-day retail tier costs. Source entries may group strengths/forms; exact coverage requires review.",
       "providers": "Official 2027 NC PPO PDF linked to True Choice. Public directory responds on port 8003, but no 2027 InsurancePlan records were found. Manual provider/facility selections export for review; live coverage checks remain unverified.",
       "connection": "Public plan lookup prepared with exact CMS segment and full-year validation. It checks for 2027 records when providers are entered and rejects historical mappings. Current public catalog has 618 records dated 2025/2026. Browser CORS tested; no authentication required for tested requests.",
@@ -127,6 +127,10 @@
         {
           "label": "2027 NC HMO directory \u2014 other plans, not imported",
           "url": "https://www.healthspring.com/static/docs/medicare/plans/2027/provider-pharmacy-directory-north-carolina-hmo.pdf"
+        },
+        {
+          "label": "Official 2027 EOC catalog",
+          "url": "https://www.healthspring.com/medicare/member-resources/eoc#2027"
         }
       ]
     },

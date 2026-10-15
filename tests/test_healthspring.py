@@ -51,6 +51,20 @@ class HealthSpringTests(unittest.TestCase):
         self.assertEqual(atorvastatin['restrictions'], 'QL (30/30)')
         self.assertEqual(atorvastatin['page'], 53)
 
+    def test_nc_document_library_does_not_mix_segments_or_pdp(self):
+        data = json.loads((Path(__file__).resolve().parents[1] / 'docs/data/healthspring-documents.json').read_text())
+        documents = data['documents']
+        self.assertEqual(len(documents), 14)
+        self.assertEqual(sum(d['business'] == 'Medicare Advantage' for d in documents), 13)
+        preferred = next(d for d in documents if d['cms_id'] == 'H9725-009-001')
+        self.assertIn('Mecklenburg', preferred['counties'])
+        other_segment = next(d for d in documents if d['cms_id'] == 'H9725-009-004')
+        self.assertNotIn('Mecklenburg', other_segment['counties'])
+        assurance = next(d for d in documents if d['business'] == 'Part D')
+        self.assertIn('Assurance Rx', assurance['name'])
+        self.assertIsNone(assurance['cms_id'])
+        self.assertTrue(all('/2027/' in d['url'] and len(d['sha256']) == 64 for d in documents))
+
 
 if __name__ == '__main__':
     unittest.main()
