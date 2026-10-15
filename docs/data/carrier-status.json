@@ -79,15 +79,24 @@
     },
     {
       "name": "HealthSpring",
-      "phase": "Not started",
-      "scope": "DE, FL, GA, KY, LA, NC, NY, OH, PA, SC, TN, TX, VA supplied; availability unverified",
+      "phase": "Research",
+      "scope": "2027 Medicare Advantage research · supplied target states pending verification",
       "availability": "Not imported.",
       "benefits": "Not imported.",
       "medications": "Not imported.",
-      "providers": "Not connected.",
-      "connection": "Not investigated.",
-      "next_step": "Confirm product/state scope and official data sources before importing.",
-      "links": []
+      "providers": "Production resource access unresolved; not integrated.",
+      "connection": "Official HealthSpring guide confirms Medicare Advantage provider searches and says no authentication is required. Getting Started displays the literal base-URL placeholder providerDirectoryEndpoint. Implementation-guide server metadata responds, but anonymous provider/plan searches return Access denied or unsupported-filter errors. The separately listed devportal endpoint is a synthetic-data sandbox and was blocked by the environment proxy.",
+      "next_step": "Obtain a corrected production Provider Directory base URL and a successful real-plan request. Do not substitute Cigna commercial records or sandbox examples.",
+      "links": [
+        {
+          "label": "HealthSpring connection instructions",
+          "url": "https://interoperability.healthspring.com/provider-directory/getting-started"
+        },
+        {
+          "label": "HealthSpring implementation guide",
+          "url": "https://interoperability.healthspring.com/provider-directory/implementation-guide"
+        }
+      ]
     },
     {
       "name": "Aetna",
@@ -115,15 +124,20 @@
     },
     {
       "name": "Cigna",
-      "phase": "Not started",
-      "scope": "Carrier supplied; product scope and relationship to HealthSpring branding to verify",
+      "phase": "Research",
+      "scope": "Commercial directory verified; Medicare mapping not established",
       "availability": "Not imported.",
       "benefits": "Not imported.",
       "medications": "Not imported.",
-      "providers": "Not connected.",
-      "connection": "Not investigated.",
-      "next_step": "Confirm product/state scope and official data sources before importing.",
-      "links": []
+      "providers": "Public directory responds; not integrated into the dashboard.",
+      "connection": "Official Cigna Provider Directory documentation says no authorization required. Production metadata and sample InsurancePlan requests succeeded; inspected records were commercial products, not verified 2027 Medicare plans.",
+      "next_step": "Determine whether any requested Cigna commercial products are in scope. Keep HealthSpring Medicare on its separate official endpoint.",
+      "links": [
+        {
+          "label": "Official Cigna directory documentation",
+          "url": "https://developer.cigna.com/docs/service-apis/provider-directory/docs"
+        }
+      ]
     },
     {
       "name": "Excellus BlueCross BlueShield",
