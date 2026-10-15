@@ -84,9 +84,9 @@
       "availability": "146 MA state/plan-segment entries collected across 12 target states with CMS/PDF county checks. LA, MI and NY have only standalone PDP entries in the reviewed HealthSpring catalog and CMS release. Comparison remains the one 11-county NC True Choice pilot.",
       "benefits": "143 unique official EOC PDFs collected (162 state/document entries). Searchable library and MA segment CSV available. PA H3949-052 county summary omits Lehigh/Northampton; printed EOC and CMS agree and the discrepancy is noted. Full benefit comparisons beyond the NC pilot are pending.",
       "medications": "Six official 2027 shared formularies collected: 15,304 extracted candidates. Explicit applicability verifies 139 MA state/segments; seven MA-only entries have no included Part D. Assurance/Extra PDP lists remain separate. Only the NC pilot participates in medication comparison so far.",
-      "providers": "Official 2027 NC PPO PDF linked to True Choice. Public directory responds on port 8003, but no 2027 InsurancePlan records were found. Manual provider/facility selections export for review; live coverage checks remain unverified.",
+      "providers": "NC PPO pilot: local suggestions from the official 2027 PDF (directory dated September 23, 2026), including exact offices and source pages. Partial provider/hospital extraction; missing entries remain unverified. HMO and other-state directories are not indexed. Live API network coverage is still unverified. EyeMed official locator linked for vision.",
       "connection": "Public plan lookup prepared with exact CMS segment and full-year validation. It checks for 2027 records when providers are entered and rejects historical mappings. Current public catalog has 618 records dated 2025/2026. Browser CORS tested; no authentication required for tested requests.",
-      "next_step": "Extract benefit schedules for the remaining plans, then validate exact medication conditions and 2027 network availability. Documents are ready; historical API mappings do not confirm 2027 coverage.",
+      "next_step": "Extend verified benefit comparisons and directory indexing to additional plans/states; confirm 2027 API mappings before enabling live provider coverage claims.",
       "links": [
         {
           "label": "HealthSpring connection instructions",

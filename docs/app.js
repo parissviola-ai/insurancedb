@@ -1,9 +1,10 @@
-import {providers} from './provider.js?v=healthspring-15-docs';
-import {healthspringMapping} from './healthspring.js?v=healthspring-15-docs';
+import {pdfMatches} from './healthspring-providers.js?v=healthspring-pdf';
+import {providers} from './provider.js?v=healthspring-pdf';
+import {healthspringMapping} from './healthspring.js?v=healthspring-pdf';
 import {rankPlans,priorityKeys} from './ranking.js';
 import {workbook} from './excel.js';
-import {medicationPicker} from './medications.js?v=healthspring-15-docs';
-import {providerPicker} from './provider-picker.js?v=healthspring-15-docs';
+import {medicationPicker} from './medications.js?v=healthspring-pdf';
+import {providerPicker} from './provider-picker.js?v=healthspring-pdf';
 const form=document.querySelector('#search'); const results=document.querySelector('#results');
 const state=document.querySelector('#state');state.append(new Option('Select state',''));for(const code of ['NC','SC','GA','FL','AL','TN','VA','KY','LA','TX','OH','PA','DE','MI','NY'])state.append(new Option(code,code));
 const business=form.elements.business;business.replaceChildren(new Option('Medicare Advantage','Medicare Advantage'));
@@ -15,7 +16,7 @@ function link(parent,label,url) {if(!/^https:\/\//.test(url))return;const n=el('
 let dataPromise;let request;
 async function data() {
   if(!dataPromise) dataPromise=Promise.all(['plans','zip-counties','formularies','wellcare','healthspring','healthspring-documents'].map(async name=> {
-    const r=await fetch('./data/'+name+'.json?v=healthspring-15-docs');if(!r.ok)throw new Error('Prepared plan data could not be loaded. Please retry.');return r.json();
+    const r=await fetch('./data/'+name+'.json?v=healthspring-pdf');if(!r.ok)throw new Error('Prepared plan data could not be loaded. Please retry.');return r.json();
   })).then(([inventory,zipMap,formularies,wellcare,healthspring,healthspringDocuments])=>[{...inventory,healthspring_documents:healthspringDocuments.documents,carrier_counties:{Wellcare:wellcare.county_options || [],HealthSpring:healthspring.county_options || []},plans:[...inventory.plans,...wellcare.plans,...healthspring.plans]},zipMap,{...formularies,...wellcare.formularies,...healthspring.formularies}]).catch(e=>{dataPromise=null;throw e;});
   return dataPromise;
 }
@@ -79,6 +80,7 @@ function renderComparison() {
       if(metric){link(cell,key==='transportation'?metric.amount+' one-way rides'+(metric.amount===0?' (not covered)':''):money(metric.amount)+(key==='otc'?' / quarter':''),metric.source_url);if(key==='otc')cell.append(el('small',money(metric.amount*4)+' annual equivalent'),el('small',metric.notes));if(key!=='premium' && key!=='otc')cell.append(el('small',metric.notes));}
       else if(plan.benefit_unavailable?.[key])link(cell,plan.benefit_unavailable[key],plan.documents.find(d=>d.kind==='benefits')?.url);
       else cell.append(el('span','Unverified'));
+      if(key==='vision' && plan.carrier==='HealthSpring')link(cell,'Find an eye doctor (EyeMed)','https://eyedoclocator.eyemedvisioncare.com/healthspring/en-us');
       row.append(cell);
     }
     row.append(el('td',drugs.length?(plan.ma_only?'MA only — separate drug plan required':'Formulary matches require review'):'Not assessed'));
@@ -116,7 +118,7 @@ function exportComparison(ranked,weights) {
     ['Ranking scope','Benefit amounts, selected in-network medical costs, and plan premium only. Medication/provider coverage and eligibility require separate review.'],
     ['Missing data','Unverified, never treated as zero. OTC annual equivalent assumes four quarters, not rollover.'],
     ['Privacy','Generated locally. Candidate name and notes are blank and entered only in the downloaded workbook.']];
-  const rows=[['Plan','Plan ID','Benefit match / 100','Ranking status','Monthly premium','Dental / year','Dental conditions','OTC / quarter','OTC annual equivalent','Medical maximum / year','Specialist / visit','Hospital / 7-day stay','Eyewear / year','Advanced hearing aid / aid','Transportation one-way rides / year','Other benefit conditions','Medication review','Provider review','Eligibility','Summary of Benefits','Evidence of Coverage','Formulary','Provider directory','Reviewer choice (offline)','Reviewer notes (offline)']];
+  const rows=[['Plan','Plan ID','Benefit match / 100','Ranking status','Monthly premium','Dental / year','Dental conditions','OTC / quarter','OTC annual equivalent','Medical maximum / year','Specialist / visit','Hospital / 7-day stay','Eyewear / year','Advanced hearing aid / aid','Transportation one-way rides / year','Other benefit conditions','Medication review','Provider review','Eligibility','Summary of Benefits','Evidence of Coverage','Formulary','Provider directory','Eye doctor search','Reviewer choice (offline)','Reviewer notes (offline)']];
   for(const r of ranked){const p=r.plan,m=p.benefit_metrics || {},doc=kind=>p.documents.find(d=>d.kind===kind)?.url || 'Not available';
     rows.push([p.name,p.locator,r.score===null?'Unranked':Math.round(r.score),r.score===null?r.reason:'Relative benefit match only',
       m.premium?money(m.premium.amount):'Unverified',m.dental?money(m.dental.amount):'Unverified',m.dental?.notes || 'Unverified',
@@ -125,12 +127,12 @@ function exportComparison(ranked,weights) {
       ['otc','moop','specialist','hospital','vision','hearing','transportation'].map(k=>k+': '+(m[k]?.notes || p.benefit_unavailable?.[k] || 'Unverified')).join('\n'),
       s.drugs.length?(p.ma_only?'Separate Part D needed':'Unverified — check exact drugs and restrictions'):'Not assessed',
       s.people.length?(s.providerStatus.get(p.id) || 'Pending — directory lookup not complete'):'Enter a provider or facility name or NPI to check network participation.',
-      p.special_needs?'Special-needs eligibility must be confirmed':'Confirm enrollment eligibility',doc('benefits'),doc('evidence'),doc('formulary'),p.documents.find(d=>d.kind==='provider_directory')?.url || p.provider_search_url || 'Not available','','']);
+      p.special_needs?'Special-needs eligibility must be confirmed':'Confirm enrollment eligibility',doc('benefits'),doc('evidence'),doc('formulary'),p.documents.find(d=>d.kind==='provider_directory')?.url || p.provider_search_url || 'Not available',p.carrier==='HealthSpring'?'https://eyedoclocator.eyemedvisioncare.com/healthspring/en-us':'','','']);
   }
   const coverage=[['Plan','Check','Entered value','Candidate match','Office or drug detail','Review status','Restrictions / conditions','Source','Plan-listed tier cost','Cost assumptions','Cost source','Deductible conditions','Follow-up call notes (complete offline)']];
   for(const c of s.coverage){
     if(!c.matches.length)coverage.push([c.plan,c.kind,c.term,'','',c.message || (c.partial?'Incomplete search — unverified':'No match — unverified'),'',c.source_url || '']);
-    for(const m of c.matches)coverage.push([c.plan,c.kind,c.term,m.name,m.detail,c.partial?'Partial search — review required':m.status,m.restrictions || 'Check the official formulary for restrictions.',m.source_url,m.cost?.display || (c.kind==='Medication'?'Unverified':'Not applicable'),
+    for(const m of c.matches)coverage.push([c.plan,c.kind,c.term,m.name,m.detail,c.partial?m.status+' — review required':m.status,m.restrictions || (c.kind==='Medication'?'Check the official formulary for restrictions.':'Confirm exact office and current participation.'),m.source_url,m.cost?.display || (c.kind==='Medication'?'Unverified':'Not applicable'),
       m.cost?'30-day network retail; initial coverage; without Extra Help. '+m.cost_context.conditions:'',m.cost?.source_url || '',m.cost_context?.deductible_note || '']);
   }
   for(const p of s.plans)for(const term of s.people)if(!s.coverage.some(c=>c.plan===p.name && ['Provider','Facility'].includes(c.kind) && c.term===term))coverage.push([p.name,'Provider',term,'','','Lookup pending or unavailable — unverified','','']);
@@ -199,6 +201,8 @@ form.addEventListener('submit',async event=>{
         el('p',`${plan.carrier} · ${plan.year} · ${selected.name}, ${state.value} · ZIP ${zip}`),el('p','Monthly premium: '+plan.premium));
       card.append(el('small','Premium extracted from the Summary of Benefits. Other costs and conditions apply.'));if(plan.product_network_id)card.append(el('p','Official directory product network: '+plan.product_network_id,'metadata'));
       if(plan.scope_note)card.append(el('p',plan.scope_note,'notice'));
+      if(plan.carrier==='HealthSpring'){const vision=el('p','Eye doctor / routine vision network: ');link(vision,'Find a HealthSpring eye doctor (EyeMed)','https://eyedoclocator.eyemedvisioncare.com/healthspring/en-us');vision.append(el('small','Confirm the exact plan, office, and service before scheduling.'));card.append(vision);}
+
       for(const doc of plan.documents) {const row=el('p');link(row,({benefits:'Summary of Benefits',evidence:'Evidence of Coverage',formulary:'2027 Drug List',provider_directory:'2027 Provider and Pharmacy Directory'})[doc.kind],doc.url);card.append(row);}
       for(const drug of drugs){const matches=drugMatches(plan,drug,formularies);check(card,'Medication',drug,matches);comparisonState.coverage.push({plan:plan.name,kind:'Medication',term:drug,matches});}
       const providerSection=el('div');card.append(providerSection);sections.set(plan.id,providerSection);
@@ -223,7 +227,7 @@ form.addEventListener('submit',async event=>{
       }
       try {
         for(const term of people) {
-          const found=carrier.value!=='Devoted Health'?{matches:new Map(plans.map(p=>[p.id,[]])),truncated:true}:await providers(term,plans,signal,providerSelections.find(p=>p.label===term));if(signal.aborted)return;
+          const found=carrier.value!=='Devoted Health'?{matches:carrier.value==='HealthSpring'?pdfMatches(providerSelections.find(p=>p.label===term),plans):new Map(plans.map(p=>[p.id,[]])),truncated:true}:await providers(term,plans,signal,providerSelections.find(p=>p.label===term));if(signal.aborted)return;
           for(const plan of plans) {
             const matches=found.matches.get(plan.id);
             comparisonState.coverage.push({plan:plan.name,kind:providerSelections.find(p=>p.label===term)?.kind==='facility'?'Facility':'Provider',term,matches,partial:found.truncated,message:healthspringNote,source_url:plan.documents.find(d=>d.kind==='provider_directory')?.url || plan.provider_search_url});
