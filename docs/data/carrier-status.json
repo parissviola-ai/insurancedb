@@ -80,13 +80,13 @@
     {
       "name": "HealthSpring",
       "phase": "Partially connected",
-      "scope": "2027 Medicare Advantage \u00b7 former Cigna Medicare \u00b7 NC True Choice pilot",
-      "availability": "True Choice (PPO) H7849-113-001 imported for its 11 official NC counties. ZIP 28262 includes Mecklenburg and Cabarrus; confirm the county. Other HealthSpring plans/states are not imported.",
-      "benefits": "Official 2027 Summary of Benefits and Evidence of Coverage linked; premium, dental, medical maximum, specialist, hospital and vision amounts imported with conditions. OTC and routine transportation amounts remain unverified; routine hearing aids are not covered. Coverage library: 14 official NC EOCs downloaded and checked; 13 MA segment/county lists match CMS, plus a shared Assurance Rx PDP document. Library links are filtered by selected county; only True Choice is in comparison.",
-      "medications": "2,624 formulary candidates imported from the official 2027 MAPD formulary 00027063, including captured restrictions and preferred 30-day retail tier costs. Source entries may group strengths/forms; exact coverage requires review.",
+      "scope": "2027 source documents \u00b7 15 target states; NC True Choice pilot in comparisons",
+      "availability": "146 MA state/plan-segment entries collected across 12 target states with CMS/PDF county checks. LA, MI and NY have only standalone PDP entries in the reviewed HealthSpring catalog and CMS release. Comparison remains the one 11-county NC True Choice pilot.",
+      "benefits": "143 unique official EOC PDFs collected (162 state/document entries). Searchable library and MA segment CSV available. PA H3949-052 county summary omits Lehigh/Northampton; printed EOC and CMS agree and the discrepancy is noted. Full benefit comparisons beyond the NC pilot are pending.",
+      "medications": "Six official 2027 shared formularies collected: 15,304 extracted candidates. Explicit applicability verifies 139 MA state/segments; seven MA-only entries have no included Part D. Assurance/Extra PDP lists remain separate. Only the NC pilot participates in medication comparison so far.",
       "providers": "Official 2027 NC PPO PDF linked to True Choice. Public directory responds on port 8003, but no 2027 InsurancePlan records were found. Manual provider/facility selections export for review; live coverage checks remain unverified.",
       "connection": "Public plan lookup prepared with exact CMS segment and full-year validation. It checks for 2027 records when providers are entered and rejects historical mappings. Current public catalog has 618 records dated 2025/2026. Browser CORS tested; no authentication required for tested requests.",
-      "next_step": "Confirm availability of 2027 API plan/network records, then validate exact-office checks. Extend verified documents to the remaining HealthSpring plans and states.",
+      "next_step": "Extract benefit schedules for the remaining plans, then validate exact medication conditions and 2027 network availability. Documents are ready; historical API mappings do not confirm 2027 coverage.",
       "links": [
         {
           "label": "HealthSpring connection instructions",
@@ -131,6 +131,10 @@
         {
           "label": "Official 2027 EOC catalog",
           "url": "https://www.healthspring.com/medicare/member-resources/eoc#2027"
+        },
+        {
+          "label": "Official 2027 formulary catalog",
+          "url": "https://www.healthspring.com/medicare/member-resources/drug-list-formulary#2027"
         }
       ]
     },

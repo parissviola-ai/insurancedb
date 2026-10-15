@@ -171,3 +171,16 @@ The HealthSpring search also offers a county-filtered **Official 2027 NC coverag
 ```bash
 python fetch_healthspring_documents.py --cache /tmp/healthspring-nc-eoc --landscape /tmp/cms-2027-landscape.zip
 ```
+
+### HealthSpring source library across all 15 target states
+
+The public `healthspring-documents.html` page filters official 2027 EOCs and formulary links by state, county, plan name/CMS ID, and product type. It is linked from the main dashboard. The current collection has 162 state/document entries (146 MA state/plan-segments plus 16 PDP entries), 143 unique EOC PDFs, and six shared formularies containing 15,304 extracted candidate rows. MA formularies are joined by explicit printed CMS applicability IDs and matching state/plan name: 139 MA state/segments match; seven have no included Part D. Shared PDP sources are shown separately without claiming regional CMS linkage. LA, MI, and NY have no HealthSpring MA entries in the reviewed catalog/CMS release, but have Assurance Rx documents. These source counts do not imply full benefit comparisons or provider checks are integrated.
+
+Refresh dependencies in this order:
+
+```bash
+python fetch_healthspring_documents.py --cache /tmp/healthspring-eoc --landscape /tmp/cms-2027-landscape.zip
+python fetch_healthspring_formularies.py --cache /tmp/healthspring-eoc --landscape /tmp/cms-2027-landscape.zip
+```
+
+The EOC collector defaults to all target states, deduplicates PDFs, verifies year/printed plan codes and CMS county lists, and records unresolved download/mapping issues instead of filling gaps. CMS/PDF service areas override website summary metadata only when the printed county list explicitly agrees with CMS; PA H3949-052-000 has this documented metadata discrepancy. Only exact plan/state identities are joined. The six-formulary collection and MA CSV are separate from the NC pilot's comparison dataset; refreshing them does not automatically expand ranked comparisons or drug coverage claims. Source PDFs/text caches remain outside Git. `healthspring-ma-segments.csv` opens in Excel and includes state, segment, county list, source URLs, checks, and conditions. Browser checks cover cross-state isolation, exact segment filters, PDP separation, source notes, downloads, and the existing pilot; Python and year-gating tests remain required.

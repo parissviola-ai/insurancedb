@@ -16,6 +16,9 @@ def parse_formulary(text):
             cells = [line[start:end].replace('\ufeff', '') for line in lines[lines.index(header) + 2:]]
             pattern = r'^(.*?)\s{2,}([1-5])(?:\s+(.*))?$'
             matches = [re.match(pattern, cell.rstrip()) for cell in cells]
+            if not any(matches):
+                # The last table page can have an entirely empty second column.
+                continue
             restriction_positions = [match.start(3) for match in matches if match and match[3]]
             restriction_start = min(restriction_positions) if restriction_positions else column_header.index('Requirements/')
             tier_start = min(match.start(2) for match in matches if match)

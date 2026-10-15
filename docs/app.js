@@ -1,9 +1,9 @@
-import {providers} from './provider.js?v=healthspring-nc-docs';
-import {healthspringMapping} from './healthspring.js?v=healthspring-nc-docs';
+import {providers} from './provider.js?v=healthspring-15-docs';
+import {healthspringMapping} from './healthspring.js?v=healthspring-15-docs';
 import {rankPlans,priorityKeys} from './ranking.js';
 import {workbook} from './excel.js';
-import {medicationPicker} from './medications.js?v=healthspring-nc-docs';
-import {providerPicker} from './provider-picker.js?v=healthspring-nc-docs';
+import {medicationPicker} from './medications.js?v=healthspring-15-docs';
+import {providerPicker} from './provider-picker.js?v=healthspring-15-docs';
 const form=document.querySelector('#search'); const results=document.querySelector('#results');
 const state=document.querySelector('#state');state.append(new Option('Select state',''));for(const code of ['NC','SC','GA','FL','AL','TN','VA','KY','LA','TX','OH','PA','DE','MI','NY'])state.append(new Option(code,code));
 const business=form.elements.business;business.replaceChildren(new Option('Medicare Advantage','Medicare Advantage'));
@@ -15,7 +15,7 @@ function link(parent,label,url) {if(!/^https:\/\//.test(url))return;const n=el('
 let dataPromise;let request;
 async function data() {
   if(!dataPromise) dataPromise=Promise.all(['plans','zip-counties','formularies','wellcare','healthspring','healthspring-documents'].map(async name=> {
-    const r=await fetch('./data/'+name+'.json?v=healthspring-nc-docs');if(!r.ok)throw new Error('Prepared plan data could not be loaded. Please retry.');return r.json();
+    const r=await fetch('./data/'+name+'.json?v=healthspring-15-docs');if(!r.ok)throw new Error('Prepared plan data could not be loaded. Please retry.');return r.json();
   })).then(([inventory,zipMap,formularies,wellcare,healthspring,healthspringDocuments])=>[{...inventory,healthspring_documents:healthspringDocuments.documents,carrier_counties:{Wellcare:wellcare.county_options || [],HealthSpring:healthspring.county_options || []},plans:[...inventory.plans,...wellcare.plans,...healthspring.plans]},zipMap,{...formularies,...wellcare.formularies,...healthspring.formularies}]).catch(e=>{dataPromise=null;throw e;});
   return dataPromise;
 }
@@ -206,10 +206,11 @@ form.addEventListener('submit',async event=>{
       const details=el('details');details.id='plan-'+plan.id;details.append(el('summary',plan.name+' · Plan details'),card);results.append(details);
     }
     if(carrier.value==='HealthSpring') {
-      const library=el('details',undefined,'panel');library.append(el('summary','Official 2027 NC coverage documents'));
+      const library=el('details',undefined,'panel');library.append(el('summary','Official 2027 coverage documents for this location'));
       library.append(el('p','These are source documents, not additional comparison results. Other Medicare Advantage plans still need benefit and formulary imports. Assurance Rx is a separate Part D plan, not a Medicare Advantage plan.'));
-      const documents=inventory.healthspring_documents.filter(d=>d.business==='Part D' || d.counties?.includes(selected.name));
+      const documents=inventory.healthspring_documents.filter(d=>d.state===state.value && (d.business==='Part D' || d.counties?.includes(selected.name)));
       for(const doc of documents){const row=el('p');link(row,doc.name+(doc.cms_id?' · '+doc.cms_id:' · Part D'),doc.url);library.append(row);}
+      const all=el('a','Browse all 15 target states and matched formularies');all.href='./healthspring-documents.html';library.append(all);
       results.append(library);
     }
     if(people.length && plans.length) {
