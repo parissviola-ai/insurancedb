@@ -173,15 +173,24 @@
     },
     {
       "name": "CareFirst",
-      "phase": "Not started",
-      "scope": "Carrier supplied; states and products to verify",
-      "availability": "Not imported.",
+      "phase": "Research",
+      "scope": "Provider Directory API specification reviewed; Medicare/2027 scope unverified",
+      "availability": "No plan inventory imported. The supplied specification has no InsurancePlan operation.",
       "benefits": "Not imported.",
       "medications": "Not imported.",
-      "providers": "Not connected.",
-      "connection": "Not investigated.",
-      "next_step": "Confirm product/state scope and official data sources before importing.",
-      "links": []
+      "providers": "Practitioner, PractitionerRole, Location, HealthcareService, Organization and OrganizationAffiliation are documented. Not connected.",
+      "connection": "Uploaded OpenAPI 3.0.1 specification confirms base https://api-pit.carefirst.com/extfhirproviderdir/v1 and required x-api-subscription-key header (query alternative also documented). Anonymous Practitioner request returned 401 SubscriptionKeyNotFound. InsurancePlan and metadata returned 404 and are absent from the supplied operation list. Production environment designation, Medicare scope and 2027 mapping remain unverified.",
+      "next_step": "Request a subscription for api-cf-fhir-provider-directory-v1 through CareFirst\u2019s portal. Confirm the production base, Medicare products/2027 dates, and the CMS plan-to-network mapping source. Keep confidential keys off the public dashboard; use a backend if required.",
+      "links": [
+        {
+          "label": "CareFirst Provider Directory API documentation",
+          "url": "https://developer.carefirst.com/api-details#api=api-cf-fhir-provider-directory-v1"
+        },
+        {
+          "label": "CareFirst developer onboarding",
+          "url": "https://developer.carefirst.com/get-started"
+        }
+      ]
     },
     {
       "name": "Cigna",
