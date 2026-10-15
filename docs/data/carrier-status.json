@@ -215,15 +215,28 @@
     },
     {
       "name": "Excellus BlueCross BlueShield",
-      "phase": "Not started",
-      "scope": "New York supplied; plan availability to verify",
-      "availability": "Not imported.",
+      "phase": "Research",
+      "scope": "New York Medicare integration research \u00b7 public directory access verified",
+      "availability": "No Excellus plans imported. Sample Medicare-related InsurancePlan records include internal plan identifiers and network references, but their exact CMS plan/segment and 2027 coverage period remain unverified.",
       "benefits": "Not imported.",
-      "medications": "Not imported.",
-      "providers": "Not connected.",
-      "connection": "Not investigated.",
-      "next_step": "Confirm product/state scope and official data sources before importing.",
-      "links": []
+      "medications": "No formulary imported. The reviewed page documents public directories, not a verified drug formulary API.",
+      "providers": "Anonymous Practitioner searches and PractitionerRole lookup succeeded. Roles contain network and office references. Exact 2027 plan-specific provider/facility checks are not connected.",
+      "connection": "Official guidance states public access APIs require neither app registration nor end-user authentication/consent; Patient Access is separate. Base https://fhir.excellusbcbs.com/fhir/api tested successfully for metadata, provider search, roles, InsurancePlan read and network Organization read. A name=Medicare plan search returned 100 sampled records; none in that page had coverage periods or root CMS identifiers. A supplied-format CMS identifier search was rejected; this does not establish absence from the entire catalog.",
+      "next_step": "Resolve one exact 2027 Excellus CMS contract/PBP/segment to its internal InsurancePlan/network ID, distinguishing individual and employer/group plans. Then verify office-specific roles and source dates before connecting coverage checks.",
+      "links": [
+        {
+          "label": "Excellus public API documentation",
+          "url": "https://news.excellusbcbs.com/developer-info/interoperability-apis"
+        },
+        {
+          "label": "FHIR capability statement",
+          "url": "https://fhir.excellusbcbs.com/fhir/api/metadata"
+        },
+        {
+          "label": "API support request",
+          "url": "https://news.excellusbcbs.com/eform?form_name=api_support&fmi=19"
+        }
+      ]
     },
     {
       "name": "Medico",
