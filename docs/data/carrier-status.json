@@ -280,15 +280,20 @@
     },
     {
       "name": "Highmark Wholecare",
-      "phase": "Not started",
-      "scope": "Carrier supplied; target-state availability and products to verify",
+      "phase": "Research",
+      "scope": "HMHS provider-directory specification reviewed · Wholecare applicability unverified",
       "availability": "Not imported.",
       "benefits": "Not imported.",
       "medications": "Not imported.",
-      "providers": "Not connected.",
-      "connection": "Not investigated.",
-      "next_step": "Confirm product/state scope and official data sources before importing.",
-      "links": []
+      "providers": "Not connected. The specification supports Practitioner, PractitionerRole, Location, HealthcareService, Organization, OrganizationAffiliation and InsurancePlan resources, with network filters and pagination. Actual authorized responses and Wholecare coverage remain unverified.",
+      "connection": "Uploaded HMHS FHIRProviderDirectory v4.6 specification documents the HTTPS base apicms.hmhs.com/fhir/v4/providers and x-hmhs-keyId authentication. Tested HM metadata and HM/HMNY InsurancePlan requests returned HTTP 401; authenticated response reported the API key was not authorized. No directory data imported; credentials are excluded from the public site and repository.",
+      "next_step": "Confirm the application/key subscription and approval for this exact API and environment in the HMHS portal. Ask whether Highmark Wholecare is included and which partition to use. After access works, verify exact 2027 CMS plan/segment-to-network mappings before connecting coverage checks.",
+      "links": [
+        {
+          "label": "HMHS provider-directory API portal",
+          "url": "https://cmsapiportal.hmhs.com/api-details?apiId=696bf543-f205-428f-8065-b3ca967935c7&managerId=1&swaggerVersion=2.0&type=rest&usage=api&Itemid=192&catalogModuleId=119#overview"
+        }
+      ]
     }
   ]
 }
