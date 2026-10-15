@@ -1,5 +1,5 @@
 {
-  "updated_on": "2026-10-15",
+  "updated_on": "2026-10-14",
   "carriers": [
     {
       "name": "Devoted Health",
@@ -84,9 +84,9 @@
       "availability": "Official shopping site and CMS confirm 2027 True Choice (PPO) H7849-113-001 for ZIP 28262, Mecklenburg County NC. Not imported into plan comparison.",
       "benefits": "Exact 2027 Summary of Benefits and Evidence of Coverage downloaded and plan ID verified. Not imported.",
       "medications": "Official 2027 MAPD formulary 00027063 explicitly lists H7849-113-001; downloaded. Not imported.",
-      "providers": "Official 2027 NC PPO directory names True Choice and Mecklenburg County. Live provider-search link returned 404; no API network identifier verified.",
-      "connection": "Official shopping service successfully returned the exact 2027 CMS contract/PBP/segment and document URLs. Documented HealthSpring FHIR plan request still returned 403 Access denied. Cigna upload and 1,000 additional commercial-source records did not establish HealthSpring Medicare mapping.",
-      "next_step": "Import verified plan documents; obtain a working Medicare provider-search URL or corrected public FHIR production endpoint before enabling live network checks.",
+      "providers": "Public API accessible on port 8003; historical CMS plan-to-network references found. 2027 network mapping still unverified; not integrated. Official 2027 NC PPO PDF available.",
+      "connection": "Public HealthSpring FHIR on port 8003 successfully returned InsurancePlan and PractitionerRole without authentication. Exhaustive current plan catalog: 618 records, with 2025 and 2026 periods only; no 2027 plan record found. Port 8000 still denied access. Cigna commercial endpoint is separate.",
+      "next_step": "Import verified 2027 documents and confirm when the public directory will publish 2027 InsurancePlan/network records before enabling 2027 coverage checks.",
       "links": [
         {
           "label": "HealthSpring connection instructions",
@@ -119,6 +119,10 @@
         {
           "label": "2027 North Carolina PPO directory",
           "url": "https://www.healthspring.com/static/docs/medicare/plans/2027/provider-pharmacy-directory-north-carolina-ppo.pdf"
+        },
+        {
+          "label": "Working public FHIR InsurancePlan documentation",
+          "url": "https://data.healthspring.healthlx.com:8003/swagger-ui/?page=InsurancePlan"
         }
       ]
     },
