@@ -174,13 +174,13 @@
     {
       "name": "CareFirst",
       "phase": "Research",
-      "scope": "Provider Directory API specification reviewed; Medicare/2027 scope unverified",
+      "scope": "Proposed private, single-user directory integration \u00b7 usage clarification pending",
       "availability": "No plan inventory imported. The supplied specification has no InsurancePlan operation.",
       "benefits": "Not imported.",
       "medications": "Not imported.",
-      "providers": "Practitioner, PractitionerRole, Location, HealthcareService, Organization and OrganizationAffiliation are documented. Not connected.",
-      "connection": "Uploaded OpenAPI 3.0.1 specification confirms base https://api-pit.carefirst.com/extfhirproviderdir/v1 and required x-api-subscription-key header (query alternative also documented). Anonymous Practitioner request returned 401 SubscriptionKeyNotFound. InsurancePlan and metadata returned 404 and are absent from the supplied operation list. Production environment designation, Medicare scope and 2027 mapping remain unverified.",
-      "next_step": "Request a subscription for api-cf-fhir-provider-directory-v1 through CareFirst\u2019s portal. Confirm the production base, Medicare products/2027 dates, and the CMS plan-to-network mapping source. Keep confidential keys off the public dashboard; use a backend if required.",
+      "providers": "Not connected. Proposed design: sign-in required, live provider/facility searches through a private backend, and no persistent directory-response storage. Architecture is proposed, not implemented.",
+      "connection": "Specification confirms x-api-subscription-key access at https://api-pit.carefirst.com/extfhirproviderdir/v1. Anonymous Practitioner lookup returned 401; InsurancePlan is not documented. Reviewed terms restrict third-party use and redistribution. Email drafted to clarify approval for a single-user client tool; sending and CareFirst approval are not confirmed. No CareFirst directory records have been imported into the public dataset or exports.",
+      "next_step": "Send the drafted use-case clarification email. Obtain CareFirst confirmation for private single-user display, production/Medicare/2027 scope, subscription access, and exact CMS plan-to-network mapping. Then implement private backend authentication and protected key handling; keep CareFirst data out of public datasets and Excel exports.",
       "links": [
         {
           "label": "CareFirst Provider Directory API documentation",
@@ -189,6 +189,10 @@
         {
           "label": "CareFirst developer onboarding",
           "url": "https://developer.carefirst.com/get-started"
+        },
+        {
+          "label": "CareFirst API terms",
+          "url": "https://developer.carefirst.com/terms"
         }
       ]
     },
