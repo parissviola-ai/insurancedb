@@ -80,13 +80,13 @@
     {
       "name": "HealthSpring",
       "phase": "Research",
-      "scope": "2027 Medicare Advantage research · supplied target states pending verification",
-      "availability": "Not imported.",
+      "scope": "HCSC-owned Medicare business · 2027 Medicare Advantage research",
+      "availability": "CMS identifies 2027 HealthSpring plans under Health Care Service Corporation. NC examples include HealthSpring True Choice PPO H7849-113 with multiple segments. Not imported.",
       "benefits": "Not imported.",
       "medications": "Not imported.",
       "providers": "Production resource access unresolved; not integrated.",
       "connection": "Official HealthSpring guide confirms Medicare Advantage provider searches and says no authentication is required. Getting Started displays the literal base-URL placeholder providerDirectoryEndpoint. Implementation-guide server metadata responds, but anonymous provider/plan searches return Access denied or unsupported-filter errors. The separately listed devportal endpoint is a synthetic-data sandbox and was blocked by the environment proxy.",
-      "next_step": "Obtain a corrected production Provider Directory base URL and a successful real-plan request. Do not substitute Cigna commercial records or sandbox examples.",
+      "next_step": "Select a specific 2027 CMS plan/segment by ZIP, obtain official benefits/formulary and provider search, and resolve the production API documentation mismatch.",
       "links": [
         {
           "label": "HealthSpring connection instructions",
@@ -95,6 +95,10 @@
         {
           "label": "HealthSpring implementation guide",
           "url": "https://interoperability.healthspring.com/provider-directory/implementation-guide"
+        },
+        {
+          "label": "HealthSpring ownership and history",
+          "url": "https://www.healthspring.com/about-us"
         }
       ]
     },
@@ -125,7 +129,7 @@
     {
       "name": "Cigna",
       "phase": "Research",
-      "scope": "Commercial directory verified; Medicare mapping not established",
+      "scope": "Separate Cigna commercial business; do not use as HealthSpring Medicare source",
       "availability": "Not imported.",
       "benefits": "Not imported.",
       "medications": "Not imported.",
