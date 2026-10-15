@@ -41,14 +41,14 @@
     },
     {
       "name": "UnitedHealthcare / AARP",
-      "phase": "Research",
+      "phase": "Paused",
       "scope": "Medicare products first; other lines pending",
       "availability": "Official ZIP/county shopping source found; not imported.",
-      "benefits": "Not imported.",
+      "benefits": "Uploaded 2027 FL Plan Highlights reviewed for H1045-059-000. Not imported; Summary of Benefits/Evidence of Coverage still needed.",
       "medications": "Not imported.",
       "providers": "Not connected.",
       "connection": "Third-party API listing found; endpoint unavailable from this environment. Linked UHC documentation displayed “Coming soon” to project owner. No working integration verified.",
-      "next_step": "Return after Wellcare; verify official endpoints/access and 2027 documents.",
+      "next_step": "Research paused at project owner’s request while Molina is investigated.",
       "links": [
         {
           "label": "Official Medicare plan website",
@@ -59,14 +59,23 @@
     {
       "name": "Molina",
       "phase": "Research",
-      "scope": "KY, NY, OH, SC, TX supplied by project owner; product availability unverified",
-      "availability": "Not imported.",
+      "scope": "2027 Medicare Advantage · KY, NY, OH, SC, TX researched",
+      "availability": "CMS lists 16 state/plan/segment records in these five states, all D-SNP. Includes Passport Advantage and Senior Whole Health branding. Not yet imported into the dashboard.",
       "benefits": "Not imported.",
       "medications": "Not imported.",
       "providers": "Not connected.",
-      "connection": "Initial research only; no usable API verified.",
-      "next_step": "Find current official interoperability documentation and 2027 plan sources.",
-      "links": []
+      "connection": "Official developer portal and provider-directory sandbox documentation verified. Sandbox uses mock data and permits unauthenticated tests. Production endpoint and access requirements remain unverified.",
+      "next_step": "Confirm the production provider-directory endpoint and CMS-plan/network mapping, then retrieve 2027 benefits and formularies.",
+      "links": [
+        {
+          "label": "Official developer portal",
+          "url": "https://developer.interop.molinahealthcare.com/"
+        },
+        {
+          "label": "Developer documentation and FAQ",
+          "url": "https://developer.interop.molinahealthcare.com/help"
+        }
+      ]
     },
     {
       "name": "HealthSpring",
