@@ -1,14 +1,14 @@
-import {pdfMatches} from './healthspring-providers.js?v=healthspring-pdf';
-import {providers} from './provider.js?v=healthspring-pdf';
-import {healthspringMapping} from './healthspring.js?v=healthspring-pdf';
+import {pdfMatches} from './healthspring-providers.js?v=healthspring-all-directories';
+import {providers} from './provider.js?v=healthspring-all-directories';
+import {healthspringMapping} from './healthspring.js?v=healthspring-all-directories';
 import {rankPlans,priorityKeys} from './ranking.js';
 import {workbook} from './excel.js';
-import {medicationPicker} from './medications.js?v=healthspring-pdf';
-import {providerPicker} from './provider-picker.js?v=healthspring-pdf';
+import {medicationPicker} from './medications.js?v=healthspring-all-directories';
+import {providerPicker} from './provider-picker.js?v=healthspring-all-directories';
 const form=document.querySelector('#search'); const results=document.querySelector('#results');
 const state=document.querySelector('#state');state.append(new Option('Select state',''));for(const code of ['NC','SC','GA','FL','AL','TN','VA','KY','LA','TX','OH','PA','DE','MI','NY'])state.append(new Option(code,code));
 const business=form.elements.business;business.replaceChildren(new Option('Medicare Advantage','Medicare Advantage'));
-const carrier=form.elements.carrier;carrier.replaceChildren(new Option('Devoted Health','Devoted Health'),new Option('Wellcare — North Carolina','Wellcare'),new Option('HealthSpring (formerly Cigna Medicare) — NC pilot','HealthSpring'));
+const carrier=form.elements.carrier;carrier.replaceChildren(new Option('Devoted Health','Devoted Health'),new Option('Wellcare — North Carolina','Wellcare'),new Option('HealthSpring (formerly Cigna Medicare)','HealthSpring'));
 carrier.addEventListener('change',()=>{request?.abort();comparisonState?.container.scrollObserver?.disconnect();comparisonState=null;updateCounty(false);results.replaceChildren(el('p','Carrier changed. Search again to compare plans.'));});
 const county=form.elements.county;
 function el(tag,text,cls) {const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n;}
@@ -16,7 +16,7 @@ function link(parent,label,url) {if(!/^https:\/\//.test(url))return;const n=el('
 let dataPromise;let request;
 async function data() {
   if(!dataPromise) dataPromise=Promise.all(['plans','zip-counties','formularies','wellcare','healthspring','healthspring-documents'].map(async name=> {
-    const r=await fetch('./data/'+name+'.json?v=healthspring-pdf');if(!r.ok)throw new Error('Prepared plan data could not be loaded. Please retry.');return r.json();
+    const r=await fetch('./data/'+name+'.json?v=healthspring-all-directories');if(!r.ok)throw new Error('Prepared plan data could not be loaded. Please retry.');return r.json();
   })).then(([inventory,zipMap,formularies,wellcare,healthspring,healthspringDocuments])=>[{...inventory,healthspring_documents:healthspringDocuments.documents,carrier_counties:{Wellcare:wellcare.county_options || [],HealthSpring:healthspring.county_options || []},plans:[...inventory.plans,...wellcare.plans,...healthspring.plans]},zipMap,{...formularies,...wellcare.formularies,...healthspring.formularies}]).catch(e=>{dataPromise=null;throw e;});
   return dataPromise;
 }
@@ -79,7 +79,7 @@ function renderComparison() {
       const cell=el('td');const metric=plan.benefit_metrics?.[key];
       if(metric){link(cell,key==='transportation'?metric.amount+' one-way rides'+(metric.amount===0?' (not covered)':''):money(metric.amount)+(key==='otc'?' / quarter':''),metric.source_url);if(key==='otc')cell.append(el('small',money(metric.amount*4)+' annual equivalent'),el('small',metric.notes));if(key!=='premium' && key!=='otc')cell.append(el('small',metric.notes));}
       else if(plan.benefit_unavailable?.[key])link(cell,plan.benefit_unavailable[key],plan.documents.find(d=>d.kind==='benefits')?.url);
-      else cell.append(el('span','Unverified'));
+      else {cell.append(el('span','Unverified'));if(plan.benefit_review_notes?.[key]){cell.append(el('small',plan.benefit_review_notes[key]));link(cell,'Review official benefits',plan.documents.find(d=>d.kind==='benefits')?.url);}}
       if(key==='vision' && plan.carrier==='HealthSpring')link(cell,'Find an eye doctor (EyeMed)','https://eyedoclocator.eyemedvisioncare.com/healthspring/en-us');
       row.append(cell);
     }
@@ -124,7 +124,7 @@ function exportComparison(ranked,weights) {
       m.premium?money(m.premium.amount):'Unverified',m.dental?money(m.dental.amount):'Unverified',m.dental?.notes || 'Unverified',
       m.otc?money(m.otc.amount):'Unverified',m.otc?money(m.otc.amount*4):'Unverified',
       ...['moop','specialist','hospital','vision','hearing','transportation'].map(k=>m[k]?(k==='transportation'?m[k].amount+' one-way rides':money(m[k].amount)):(p.benefit_unavailable?.[k] || 'Unverified')),
-      ['otc','moop','specialist','hospital','vision','hearing','transportation'].map(k=>k+': '+(m[k]?.notes || p.benefit_unavailable?.[k] || 'Unverified')).join('\n'),
+      ['otc','moop','specialist','hospital','vision','hearing','transportation'].map(k=>k+': '+(m[k]?.notes || p.benefit_unavailable?.[k] || p.benefit_review_notes?.[k] || 'Unverified')).join('\n'),
       s.drugs.length?(p.ma_only?'Separate Part D needed':'Unverified — check exact drugs and restrictions'):'Not assessed',
       s.people.length?(s.providerStatus.get(p.id) || 'Pending — directory lookup not complete'):'Enter a provider or facility name or NPI to check network participation.',
       p.special_needs?'Special-needs eligibility must be confirmed':'Confirm enrollment eligibility',doc('benefits'),doc('evidence'),doc('formulary'),p.documents.find(d=>d.kind==='provider_directory')?.url || p.provider_search_url || 'Not available',p.carrier==='HealthSpring'?'https://eyedoclocator.eyemedvisioncare.com/healthspring/en-us':'','','']);
@@ -230,7 +230,7 @@ form.addEventListener('submit',async event=>{
           const found=carrier.value!=='Devoted Health'?{matches:carrier.value==='HealthSpring'?pdfMatches(providerSelections.find(p=>p.label===term),plans):new Map(plans.map(p=>[p.id,[]])),truncated:true}:await providers(term,plans,signal,providerSelections.find(p=>p.label===term));if(signal.aborted)return;
           for(const plan of plans) {
             const matches=found.matches.get(plan.id);
-            comparisonState.coverage.push({plan:plan.name,kind:providerSelections.find(p=>p.label===term)?.kind==='facility'?'Facility':'Provider',term,matches,partial:found.truncated,message:healthspringNote,source_url:plan.documents.find(d=>d.kind==='provider_directory')?.url || plan.provider_search_url});
+            comparisonState.coverage.push({plan:plan.name,kind:providerSelections.find(p=>p.label===term)?.kind==='facility'?'Facility':'Provider',term,matches,partial:found.truncated,message:healthspringNote,source_url:providerSelections.find(p=>p.label===term)?.source_url || plan.documents.find(d=>d.kind==='provider_directory')?.url || plan.provider_search_url});
             check(sections.get(plan.id),providerSelections.find(p=>p.label===term)?.kind==='facility'?'Facility':'Provider',term,matches,healthspringNote || (found.truncated?'Unverified — use the official plan directory to check this exact office.':undefined));
             const previous=comparisonState.providerStatus.get(plan.id);
             const uncertain=found.truncated || !matches.length || previous?.includes('Unverified');

@@ -1,0 +1,715 @@
+{
+  "year": 2027,
+  "source_url": "https://www.healthspring.com/medicare/member-resources/provider-pharmacy-directories",
+  "states": [
+    "NC",
+    "SC",
+    "GA",
+    "FL",
+    "AL",
+    "TN",
+    "VA",
+    "KY",
+    "LA",
+    "TX",
+    "OH",
+    "PA",
+    "DE",
+    "MI",
+    "NY"
+  ],
+  "directories": [
+    {
+      "id": "provider-pharmacy-directory-alabama-ppo",
+      "url": "https://www.healthspring.com/static/docs/medicare/plans/2027/provider-pharmacy-directory-alabama-ppo.pdf",
+      "states": [
+        "AL"
+      ],
+      "year": 2027,
+      "name": "Alabama Ppo",
+      "plan_ids": [],
+      "directory_date": "2026-09-23",
+      "row_count": 8560,
+      "providers": 8491,
+      "facilities": 69,
+      "skipped_blocks": 4734,
+      "sha256": "1cd05b86d1cf37e59faeddd4297efc06fbae9186ab47e8e9c5b06156abf92d4b",
+      "status": "Indexed",
+      "index_file": "./data/healthspring-directories/provider-pharmacy-directory-alabama-ppo.json"
+    },
+    {
+      "id": "provider-pharmacy-directory-arkansas-tennessee-hmo",
+      "url": "https://www.healthspring.com/static/docs/medicare/plans/2027/provider-pharmacy-directory-arkansas-tennessee-hmo.pdf",
+      "states": [
+        "TN"
+      ],
+      "year": 2027,
+      "name": "Arkansas Tennessee Hmo",
+      "plan_ids": [],
+      "directory_date": "2026-09-23",
+      "row_count": 5242,
+      "providers": 5158,
+      "facilities": 84,
+      "skipped_blocks": 2804,
+      "sha256": "8755e4f38958921f30fb2ced905f2acea5283f7815f414d763572f9e34c733b7",
+      "status": "Indexed",
+      "index_file": "./data/healthspring-directories/provider-pharmacy-directory-arkansas-tennessee-hmo.json"
+    },
+    {
+      "id": "provider-pharmacy-directory-central-southern-florida-dsnp",
+      "url": "https://www.healthspring.com/static/docs/medicare/plans/2027/provider-pharmacy-directory-central-southern-florida-dsnp.pdf",
+      "states": [
+        "FL"
+      ],
+      "year": 2027,
+      "name": "Central Southern Florida Dsnp",
+      "plan_ids": [],
+      "directory_date": "2026-09-23",
+      "row_count": 20078,
+      "providers": 19946,
+      "facilities": 132,
+      "skipped_blocks": 11117,
+      "sha256": "0fa32fb05a524bc726137369017b6ba5b1529d5dca73a14a4e69d1045c83f69e",
+      "status": "Indexed",
+      "index_file": "./data/healthspring-directories/provider-pharmacy-directory-central-southern-florida-dsnp.json"
+    },
+    {
+      "id": "provider-pharmacy-directory-central-southern-florida-hmo",
+      "url": "https://www.healthspring.com/static/docs/medicare/plans/2027/provider-pharmacy-directory-central-southern-florida-hmo.pdf",
+      "states": [
+        "FL"
+      ],
+      "year": 2027,
+      "name": "Central Southern Florida Hmo",
+      "plan_ids": [],
+      "directory_date": "2026-09-23",
+      "row_count": 36532,
+      "providers": 36264,
+      "facilities": 268,
+      "skipped_blocks": 21409,
+      "sha256": "dee2d26ef328bc3866e5da47e4c53cc12d0a933fee2bd81314e090ef10578f23",
+      "status": "Indexed",
+      "index_file": "./data/healthspring-directories/provider-pharmacy-directory-central-southern-florida-hmo.json"
+    },
+    {
+      "id": "provider-pharmacy-directory-corpus-christi-texas-hmo",
+      "url": "https://www.healthspring.com/static/docs/medicare/plans/2027/provider-pharmacy-directory-corpus-christi-texas-hmo.pdf",
+      "states": [
+        "TX"
+      ],
+      "year": 2027,
+      "name": "Corpus Christi Texas Hmo",
+      "plan_ids": [],
+      "directory_date": "2026-09-23",
+      "row_count": 558,
+      "providers": 548,
+      "facilities": 10,
+      "skipped_blocks": 219,
+      "sha256": "2f3bcc101abf67df04287e35a82ce613847dc6e608949dfe23eac48d4b86ce81",
+      "status": "Indexed",
+      "index_file": "./data/healthspring-directories/provider-pharmacy-directory-corpus-christi-texas-hmo.json"
+    },
+    {
+      "id": "provider-pharmacy-directory-dc-delaware-ppo",
+      "url": "https://www.healthspring.com/static/docs/medicare/plans/2027/provider-pharmacy-directory-dc-delaware-ppo.pdf",
+      "states": [
+        "DE"
+      ],
+      "year": 2027,
+      "name": "Dc Delaware Ppo",
+      "plan_ids": [],
+      "directory_date": "2026-09-23",
+      "row_count": 21420,
+      "providers": 21342,
+      "facilities": 78,
+      "skipped_blocks": 13057,
+      "sha256": "6d1ed179f8ff6ad2b2ccfef0e82fed4739754a8af95000abffdb0f250cdabce6",
+      "status": "Indexed",
+      "index_file": "./data/healthspring-directories/provider-pharmacy-directory-dc-delaware-ppo.json"
+    },
+    {
+      "id": "provider-pharmacy-directory-delaware-hmo",
+      "url": "https://www.healthspring.com/static/docs/medicare/plans/2027/provider-pharmacy-directory-delaware-hmo.pdf",
+      "states": [
+        "DE"
+      ],
+      "year": 2027,
+      "name": "Delaware Hmo",
+      "plan_ids": [],
+      "directory_date": "2026-09-23",
+      "row_count": 8228,
+      "providers": 8207,
+      "facilities": 21,
+      "skipped_blocks": 3864,
+      "sha256": "7500fafcba3ac41703715ef7ded4d0e4324ef165a775ee10332eec62ec80f475",
+      "status": "Indexed",
+      "index_file": "./data/healthspring-directories/provider-pharmacy-directory-delaware-hmo.json"
+    },
+    {
+      "id": "provider-pharmacy-directory-east-texas-hmo",
+      "url": "https://www.healthspring.com/static/docs/medicare/plans/2027/provider-pharmacy-directory-east-texas-hmo.pdf",
+      "states": [
+        "TX"
+      ],
+      "year": 2027,
+      "name": "East Texas Hmo",
+      "plan_ids": [],
+      "directory_date": "2026-09-23",
+      "row_count": 2543,
+      "providers": 2514,
+      "facilities": 29,
+      "skipped_blocks": 805,
+      "sha256": "1ca47dba53acbf5c4de6a89adafb42e2359220b46c428b36b5a237d826d77f4c",
+      "status": "Indexed",
+      "index_file": "./data/healthspring-directories/provider-pharmacy-directory-east-texas-hmo.json"
+    },
+    {
+      "id": "provider-pharmacy-directory-el-paso-texas-hmo",
+      "url": "https://www.healthspring.com/static/docs/medicare/plans/2027/provider-pharmacy-directory-el-paso-texas-hmo.pdf",
+      "states": [
+        "TX"
+      ],
+      "year": 2027,
+      "name": "El Paso Texas Hmo",
+      "plan_ids": [],
+      "directory_date": "2026-09-23",
+      "row_count": 1705,
+      "providers": 1692,
+      "facilities": 13,
+      "skipped_blocks": 1376,
+      "sha256": "c2ac422f933df0ac99950ffed47b79bf52f6e4f53b9aec079d699ae2aec16e8e",
+      "status": "Indexed",
+      "index_file": "./data/healthspring-directories/provider-pharmacy-directory-el-paso-texas-hmo.json"
+    },
+    {
+      "id": "provider-pharmacy-directory-georgia-hmo",
+      "url": "https://www.healthspring.com/static/docs/medicare/plans/2027/provider-pharmacy-directory-georgia-hmo.pdf",
+      "states": [
+        "GA"
+      ],
+      "year": 2027,
+      "name": "Georgia Hmo",
+      "plan_ids": [],
+      "directory_date": "2026-09-23",
+      "row_count": 22760,
+      "providers": 22534,
+      "facilities": 226,
+      "skipped_blocks": 11036,
+      "sha256": "dd6187bf206e74031b9c1f9923b03a95e1aa35a6591608d4d9097acea5914f6d",
+      "status": "Indexed",
+      "index_file": "./data/healthspring-directories/provider-pharmacy-directory-georgia-hmo.json"
+    },
+    {
+      "id": "provider-pharmacy-directory-georgia-ppo",
+      "url": "https://www.healthspring.com/static/docs/medicare/plans/2027/provider-pharmacy-directory-georgia-ppo.pdf",
+      "states": [
+        "GA"
+      ],
+      "year": 2027,
+      "name": "Georgia Ppo",
+      "plan_ids": [],
+      "directory_date": "2026-09-23",
+      "row_count": 22866,
+      "providers": 22641,
+      "facilities": 225,
+      "skipped_blocks": 11087,
+      "sha256": "6e21df571d9ea774793dcd01a301c33f40fcd6fe60b5a7296449a73d2a118cd0",
+      "status": "Indexed",
+      "index_file": "./data/healthspring-directories/provider-pharmacy-directory-georgia-ppo.json"
+    },
+    {
+      "id": "provider-pharmacy-directory-georgia-tennessee-hmo",
+      "url": "https://www.healthspring.com/static/docs/medicare/plans/2027/provider-pharmacy-directory-georgia-tennessee-hmo.pdf",
+      "states": [
+        "GA",
+        "TN"
+      ],
+      "year": 2027,
+      "name": "Georgia Tennessee Hmo",
+      "plan_ids": [],
+      "directory_date": "2026-09-23",
+      "row_count": 4503,
+      "providers": 4458,
+      "facilities": 45,
+      "skipped_blocks": 1754,
+      "sha256": "a20e27cc27188ebd5c9a23d0bac849432a6466d7d91d08174f33885775b08ea7",
+      "status": "Indexed",
+      "index_file": "./data/healthspring-directories/provider-pharmacy-directory-georgia-tennessee-hmo.json"
+    },
+    {
+      "id": "provider-pharmacy-directory-georgia-tennessee-virginia-ppo",
+      "url": "https://www.healthspring.com/static/docs/medicare/plans/2027/provider-pharmacy-directory-georgia-tennessee-virginia-ppo.pdf",
+      "states": [
+        "GA",
+        "TN",
+        "VA"
+      ],
+      "year": 2027,
+      "name": "Georgia Tennessee Virginia Ppo",
+      "plan_ids": [],
+      "directory_date": "2026-09-23",
+      "row_count": 4375,
+      "providers": 4358,
+      "facilities": 17,
+      "skipped_blocks": 2221,
+      "sha256": "9294242de8de288b9d5668f333334b54cad7ec912817c504f9bdd3392744c875",
+      "status": "Indexed",
+      "index_file": "./data/healthspring-directories/provider-pharmacy-directory-georgia-tennessee-virginia-ppo.json"
+    },
+    {
+      "id": "provider-pharmacy-directory-kentucky-ohio-hmo",
+      "url": "https://www.healthspring.com/static/docs/medicare/plans/2027/provider-pharmacy-directory-kentucky-ohio-hmo.pdf",
+      "states": [
+        "KY",
+        "OH"
+      ],
+      "year": 2027,
+      "name": "Kentucky Ohio Hmo",
+      "plan_ids": [],
+      "directory_date": "2026-09-23",
+      "row_count": 9964,
+      "providers": 9836,
+      "facilities": 128,
+      "skipped_blocks": 5018,
+      "sha256": "ef71236f74804650f997249d4ab7f89200de15e8147b401d1d4c538826a8ef8e",
+      "status": "Indexed",
+      "index_file": "./data/healthspring-directories/provider-pharmacy-directory-kentucky-ohio-hmo.json"
+    },
+    {
+      "id": "provider-pharmacy-directory-kentucky-ohio-ppo",
+      "url": "https://www.healthspring.com/static/docs/medicare/plans/2027/provider-pharmacy-directory-kentucky-ohio-ppo.pdf",
+      "states": [
+        "KY",
+        "OH"
+      ],
+      "year": 2027,
+      "name": "Kentucky Ohio Ppo",
+      "plan_ids": [],
+      "directory_date": "2026-09-23",
+      "row_count": 20100,
+      "providers": 19779,
+      "facilities": 321,
+      "skipped_blocks": 10511,
+      "sha256": "ac3b7cab9c034f158162b1daf6ad617a0b43053a08e3db91a15478bdb6af29f4",
+      "status": "Indexed",
+      "index_file": "./data/healthspring-directories/provider-pharmacy-directory-kentucky-ohio-ppo.json"
+    },
+    {
+      "id": "provider-pharmacy-directory-knoxville-hmo",
+      "url": "https://www.healthspring.com/static/docs/medicare/plans/2027/provider-pharmacy-directory-knoxville-hmo.pdf",
+      "states": [
+        "TN"
+      ],
+      "year": 2027,
+      "name": "Knoxville Hmo",
+      "plan_ids": [],
+      "directory_date": "2026-09-23",
+      "row_count": 4648,
+      "providers": 4610,
+      "facilities": 38,
+      "skipped_blocks": 1872,
+      "sha256": "950c5bdba39cd976e058c53b0e4978dc03d192e7f832472afe255fc58cd8ebd1",
+      "status": "Indexed",
+      "index_file": "./data/healthspring-directories/provider-pharmacy-directory-knoxville-hmo.json"
+    },
+    {
+      "id": "provider-pharmacy-directory-middle-tennessee-hmo",
+      "url": "https://www.healthspring.com/static/docs/medicare/plans/2027/provider-pharmacy-directory-middle-tennessee-hmo.pdf",
+      "states": [
+        "TN"
+      ],
+      "year": 2027,
+      "name": "Middle Tennessee Hmo",
+      "plan_ids": [],
+      "directory_date": "2026-09-23",
+      "row_count": 9911,
+      "providers": 9828,
+      "facilities": 83,
+      "skipped_blocks": 4951,
+      "sha256": "6ea39a71926d232d1ad3d4142a88af87408545a8383f1b6a06fb14f112ba8143",
+      "status": "Indexed",
+      "index_file": "./data/healthspring-directories/provider-pharmacy-directory-middle-tennessee-hmo.json"
+    },
+    {
+      "id": "provider-pharmacy-directory-mississippi-tennessee-ppo",
+      "url": "https://www.healthspring.com/static/docs/medicare/plans/2027/provider-pharmacy-directory-mississippi-tennessee-ppo.pdf",
+      "states": [
+        "TN"
+      ],
+      "year": 2027,
+      "name": "Mississippi Tennessee Ppo",
+      "plan_ids": [],
+      "directory_date": "2026-09-23",
+      "row_count": 17071,
+      "providers": 16930,
+      "facilities": 141,
+      "skipped_blocks": 8783,
+      "sha256": "8a507fd7eb7342c100d329e0d842034ec23cfe46d502f6e8418b9eedea5a61fc",
+      "status": "Indexed",
+      "index_file": "./data/healthspring-directories/provider-pharmacy-directory-mississippi-tennessee-ppo.json"
+    },
+    {
+      "id": "provider-pharmacy-directory-north-alabama-hmo",
+      "url": "https://www.healthspring.com/static/docs/medicare/plans/2027/provider-pharmacy-directory-north-alabama-hmo.pdf",
+      "states": [
+        "AL"
+      ],
+      "year": 2027,
+      "name": "North Alabama Hmo",
+      "plan_ids": [],
+      "directory_date": "2026-09-23",
+      "row_count": 8131,
+      "providers": 8051,
+      "facilities": 80,
+      "skipped_blocks": 4316,
+      "sha256": "1d77d8cc3e08812f34a9a92e27fe7a694b4d68f33af4954f6a6c9df33f675fce",
+      "status": "Indexed",
+      "index_file": "./data/healthspring-directories/provider-pharmacy-directory-north-alabama-hmo.json"
+    },
+    {
+      "id": "provider-pharmacy-directory-north-carolina-hmo",
+      "url": "https://www.healthspring.com/static/docs/medicare/plans/2027/provider-pharmacy-directory-north-carolina-hmo.pdf",
+      "states": [
+        "NC"
+      ],
+      "year": 2027,
+      "name": "North Carolina Hmo",
+      "plan_ids": [],
+      "directory_date": "2026-09-23",
+      "row_count": 28863,
+      "providers": 28764,
+      "facilities": 99,
+      "skipped_blocks": 16606,
+      "sha256": "3be26c01cd91f811a331f4b1c5f52e85a9e9b30fd08e38b44974e0e0c9cc3029",
+      "status": "Indexed",
+      "index_file": "./data/healthspring-directories/provider-pharmacy-directory-north-carolina-hmo.json"
+    },
+    {
+      "id": "provider-pharmacy-directory-north-carolina-ppo",
+      "url": "https://www.healthspring.com/static/docs/medicare/plans/2027/provider-pharmacy-directory-north-carolina-ppo.pdf",
+      "states": [
+        "NC"
+      ],
+      "year": 2027,
+      "name": "North Carolina Ppo",
+      "plan_ids": [
+        "H7849-113-001"
+      ],
+      "directory_date": "2026-09-23",
+      "row_count": 28365,
+      "providers": 28268,
+      "facilities": 97,
+      "skipped_blocks": 13496,
+      "sha256": "f00ac41095507c22c8098a9b217cac2f17ff7fd341e2ff5f644158cb835a6fc3",
+      "status": "Indexed",
+      "index_file": "./data/healthspring-directories/provider-pharmacy-directory-north-carolina-ppo.json"
+    },
+    {
+      "id": "provider-pharmacy-directory-north-texas-hmo",
+      "url": "https://www.healthspring.com/static/docs/medicare/plans/2027/provider-pharmacy-directory-north-texas-hmo.pdf",
+      "states": [
+        "TX"
+      ],
+      "year": 2027,
+      "name": "North Texas Hmo",
+      "plan_ids": [],
+      "directory_date": "2026-09-23",
+      "row_count": 15368,
+      "providers": 15224,
+      "facilities": 144,
+      "skipped_blocks": 11897,
+      "sha256": "d995b8ad287a5c78c77a6bf3f781a9a8b5d1b0ad47586af115c7000e0cca3342",
+      "status": "Indexed",
+      "index_file": "./data/healthspring-directories/provider-pharmacy-directory-north-texas-hmo.json"
+    },
+    {
+      "id": "provider-pharmacy-directory-northeast-ohio-hmo",
+      "url": "https://www.healthspring.com/static/docs/medicare/plans/2027/provider-pharmacy-directory-northeast-ohio-hmo.pdf",
+      "states": [
+        "OH"
+      ],
+      "year": 2027,
+      "name": "Northeast Ohio Hmo",
+      "plan_ids": [],
+      "directory_date": "2026-09-23",
+      "row_count": 9885,
+      "providers": 9693,
+      "facilities": 192,
+      "skipped_blocks": 6165,
+      "sha256": "f53fd2b8a11ee9b23ab270aa26d2a2e67366b2edfa907822f907168c8ad7b2cf",
+      "status": "Indexed",
+      "index_file": "./data/healthspring-directories/provider-pharmacy-directory-northeast-ohio-hmo.json"
+    },
+    {
+      "id": "provider-pharmacy-directory-northern-virginia-hmo",
+      "url": "https://www.healthspring.com/static/docs/medicare/plans/2027/provider-pharmacy-directory-northern-virginia-hmo.pdf",
+      "states": [
+        "VA"
+      ],
+      "year": 2027,
+      "name": "Northern Virginia Hmo",
+      "plan_ids": [],
+      "directory_date": "2026-09-23",
+      "row_count": 3072,
+      "providers": 3069,
+      "facilities": 3,
+      "skipped_blocks": 858,
+      "sha256": "9242558530f6737c7f61d02cb35052752980909cf9215cac217f80c9795f8cbc",
+      "status": "Indexed",
+      "index_file": "./data/healthspring-directories/provider-pharmacy-directory-northern-virginia-hmo.json"
+    },
+    {
+      "id": "provider-pharmacy-directory-northern-virginia-ppo",
+      "url": "https://www.healthspring.com/static/docs/medicare/plans/2027/provider-pharmacy-directory-northern-virginia-ppo.pdf",
+      "states": [
+        "VA"
+      ],
+      "year": 2027,
+      "name": "Northern Virginia Ppo",
+      "plan_ids": [],
+      "directory_date": "2026-09-23",
+      "row_count": 3134,
+      "providers": 3129,
+      "facilities": 5,
+      "skipped_blocks": 867,
+      "sha256": "a4e62c8ccbdf4e790c9c722b3a6a581160d9fbb67011854c1daf43a7e29babbd",
+      "status": "Indexed",
+      "index_file": "./data/healthspring-directories/provider-pharmacy-directory-northern-virginia-ppo.json"
+    },
+    {
+      "id": "provider-pharmacy-directory-northwest-florida-hmo",
+      "url": "https://www.healthspring.com/static/docs/medicare/plans/2027/provider-pharmacy-directory-northwest-florida-hmo.pdf",
+      "states": [
+        "FL"
+      ],
+      "year": 2027,
+      "name": "Northwest Florida Hmo",
+      "plan_ids": [],
+      "directory_date": "2026-09-23",
+      "row_count": 2370,
+      "providers": 2341,
+      "facilities": 29,
+      "skipped_blocks": 1082,
+      "sha256": "5f23282465bc398cb39a57aa3b2487f46dae3ecc8976734b9d2839c5c67741ce",
+      "status": "Indexed",
+      "index_file": "./data/healthspring-directories/provider-pharmacy-directory-northwest-florida-hmo.json"
+    },
+    {
+      "id": "provider-pharmacy-directory-oklahoma-texas-ppo",
+      "url": "https://www.healthspring.com/static/docs/medicare/plans/2027/provider-pharmacy-directory-oklahoma-texas-ppo.pdf",
+      "states": [
+        "TX"
+      ],
+      "year": 2027,
+      "name": "Oklahoma Texas Ppo",
+      "plan_ids": [],
+      "directory_date": "2026-09-23",
+      "row_count": 40771,
+      "providers": 40353,
+      "facilities": 418,
+      "skipped_blocks": 23199,
+      "sha256": "76d50dceb8d8479a004fd79a650d92e3d95fa86526dfca65239670b0058b7a86",
+      "status": "Indexed",
+      "index_file": "./data/healthspring-directories/provider-pharmacy-directory-oklahoma-texas-ppo.json"
+    },
+    {
+      "id": "provider-pharmacy-directory-pennsylvania-ppo",
+      "url": "https://www.healthspring.com/static/docs/medicare/plans/2027/provider-pharmacy-directory-pennsylvania-ppo.pdf",
+      "states": [
+        "PA"
+      ],
+      "year": 2027,
+      "name": "Pennsylvania Ppo",
+      "plan_ids": [],
+      "directory_date": "2026-09-23",
+      "row_count": 49565,
+      "providers": 49368,
+      "facilities": 197,
+      "skipped_blocks": 26973,
+      "sha256": "f7177314cfaad5b7ba89df032f7bf0300f9144053eff0c22fcc7c757b4282b51",
+      "status": "Indexed",
+      "index_file": "./data/healthspring-directories/provider-pharmacy-directory-pennsylvania-ppo.json"
+    },
+    {
+      "id": "provider-pharmacy-directory-philadelphia-area-hmo",
+      "url": "https://www.healthspring.com/static/docs/medicare/plans/2027/provider-pharmacy-directory-philadelphia-area-hmo.pdf",
+      "states": [
+        "PA"
+      ],
+      "year": 2027,
+      "name": "Philadelphia Area Hmo",
+      "plan_ids": [],
+      "directory_date": "2026-09-23",
+      "row_count": 45783,
+      "providers": 45623,
+      "facilities": 160,
+      "skipped_blocks": 25841,
+      "sha256": "003709c0708b57925181f3293ff6d1f9746c1ceff8f8c465c0ce4dcc4b542dd4",
+      "status": "Indexed",
+      "index_file": "./data/healthspring-directories/provider-pharmacy-directory-philadelphia-area-hmo.json"
+    },
+    {
+      "id": "provider-pharmacy-directory-pittsburgh-area-hmo",
+      "url": "https://www.healthspring.com/static/docs/medicare/plans/2027/provider-pharmacy-directory-pittsburgh-area-hmo.pdf",
+      "states": [
+        "PA"
+      ],
+      "year": 2027,
+      "name": "Pittsburgh Area Hmo",
+      "plan_ids": [],
+      "directory_date": "2026-09-23",
+      "row_count": 38462,
+      "providers": 38302,
+      "facilities": 160,
+      "skipped_blocks": 20350,
+      "sha256": "5f2f323e3433f283436cb0a9e8846732795cadd093e59f99e628dd2d054e8893",
+      "status": "Indexed",
+      "index_file": "./data/healthspring-directories/provider-pharmacy-directory-pittsburgh-area-hmo.json"
+    },
+    {
+      "id": "provider-pharmacy-directory-san-antonio-texas-hmo",
+      "url": "https://www.healthspring.com/static/docs/medicare/plans/2027/provider-pharmacy-directory-san-antonio-texas-hmo.pdf",
+      "states": [
+        "TX"
+      ],
+      "year": 2027,
+      "name": "San Antonio Texas Hmo",
+      "plan_ids": [],
+      "directory_date": "2026-09-23",
+      "row_count": 6682,
+      "providers": 6636,
+      "facilities": 46,
+      "skipped_blocks": 5934,
+      "sha256": "a3ffc48007bea0572cf1637fb4abee3e7eaebb0f83590d6f6df14176d48c5b29",
+      "status": "Indexed",
+      "index_file": "./data/healthspring-directories/provider-pharmacy-directory-san-antonio-texas-hmo.json"
+    },
+    {
+      "id": "provider-pharmacy-directory-south-alabama-hmo",
+      "url": "https://www.healthspring.com/static/docs/medicare/plans/2027/provider-pharmacy-directory-south-alabama-hmo.pdf",
+      "states": [
+        "AL"
+      ],
+      "year": 2027,
+      "name": "South Alabama Hmo",
+      "plan_ids": [],
+      "directory_date": "2026-09-23",
+      "row_count": 2773,
+      "providers": 2757,
+      "facilities": 16,
+      "skipped_blocks": 1582,
+      "sha256": "4771c78baa2723f4d584ebd59c03819be949ccea94e097f3afe38e045f4b6889",
+      "status": "Indexed",
+      "index_file": "./data/healthspring-directories/provider-pharmacy-directory-south-alabama-hmo.json"
+    },
+    {
+      "id": "provider-pharmacy-directory-south-carolina-hmo",
+      "url": "https://www.healthspring.com/static/docs/medicare/plans/2027/provider-pharmacy-directory-south-carolina-hmo.pdf",
+      "states": [
+        "SC"
+      ],
+      "year": 2027,
+      "name": "South Carolina Hmo",
+      "plan_ids": [],
+      "directory_date": "2026-09-23",
+      "row_count": 7858,
+      "providers": 7762,
+      "facilities": 96,
+      "skipped_blocks": 4395,
+      "sha256": "683f7fed2dde2a96c005860f404d5b49e1fba80a2723f25b4ba44854ec463cb2",
+      "status": "Indexed",
+      "index_file": "./data/healthspring-directories/provider-pharmacy-directory-south-carolina-hmo.json"
+    },
+    {
+      "id": "provider-pharmacy-directory-south-carolina-ppo",
+      "url": "https://www.healthspring.com/static/docs/medicare/plans/2027/provider-pharmacy-directory-south-carolina-ppo.pdf",
+      "states": [
+        "SC"
+      ],
+      "year": 2027,
+      "name": "South Carolina Ppo",
+      "plan_ids": [],
+      "directory_date": "2026-09-23",
+      "row_count": 7740,
+      "providers": 7647,
+      "facilities": 93,
+      "skipped_blocks": 4256,
+      "sha256": "fc5e340390b6d30b88565febfd4b9e32141dca37fc715a161949096c9f0ab9d4",
+      "status": "Indexed",
+      "index_file": "./data/healthspring-directories/provider-pharmacy-directory-south-carolina-ppo.json"
+    },
+    {
+      "id": "provider-pharmacy-directory-southeast-texas-hmo",
+      "url": "https://www.healthspring.com/static/docs/medicare/plans/2027/provider-pharmacy-directory-southeast-texas-hmo.pdf",
+      "states": [
+        "TX"
+      ],
+      "year": 2027,
+      "name": "Southeast Texas Hmo",
+      "plan_ids": [],
+      "directory_date": "2026-09-23",
+      "row_count": 15460,
+      "providers": 15316,
+      "facilities": 144,
+      "skipped_blocks": 12323,
+      "sha256": "552824175822b955224db4a31b1599513e3d9b937acc46f6463c5d0e1c97a352",
+      "status": "Indexed",
+      "index_file": "./data/healthspring-directories/provider-pharmacy-directory-southeast-texas-hmo.json"
+    },
+    {
+      "id": "provider-pharmacy-directory-synergy-ipa-hmo",
+      "url": "https://www.healthspring.com/static/docs/medicare/plans/2027/provider-pharmacy-directory-synergy-ipa-hmo.pdf",
+      "states": [
+        "TN"
+      ],
+      "year": 2027,
+      "name": "Synergy Ipa Hmo",
+      "plan_ids": [],
+      "directory_date": "2026-09-23",
+      "row_count": 9202,
+      "providers": 9124,
+      "facilities": 78,
+      "skipped_blocks": 4647,
+      "sha256": "caefb4a300898f530cc1d0230df2cad14116f064e0479cafb8b5f7eac59cc7f9",
+      "status": "Indexed",
+      "index_file": "./data/healthspring-directories/provider-pharmacy-directory-synergy-ipa-hmo.json"
+    },
+    {
+      "id": "provider-pharmacy-directory-texas-alliance-hmo",
+      "url": "https://www.healthspring.com/static/docs/medicare/plans/2027/provider-pharmacy-directory-texas-alliance-hmo.pdf",
+      "states": [
+        "TX"
+      ],
+      "year": 2027,
+      "name": "Texas Alliance Hmo",
+      "plan_ids": [],
+      "directory_date": "2026-09-23",
+      "row_count": 14967,
+      "providers": 14828,
+      "facilities": 139,
+      "skipped_blocks": 9342,
+      "sha256": "70243505ac7ef280016617ed06bf66a05dc936e068c8afffa004571616d0289d",
+      "status": "Indexed",
+      "index_file": "./data/healthspring-directories/provider-pharmacy-directory-texas-alliance-hmo.json"
+    },
+    {
+      "id": "provider-pharmacy-directory-texas-valley-hmo",
+      "url": "https://www.healthspring.com/static/docs/medicare/plans/2027/provider-pharmacy-directory-texas-valley-hmo.pdf",
+      "states": [
+        "TX"
+      ],
+      "year": 2027,
+      "name": "Texas Valley Hmo",
+      "plan_ids": [],
+      "directory_date": "2026-09-23",
+      "row_count": 1894,
+      "providers": 1876,
+      "facilities": 18,
+      "skipped_blocks": 1183,
+      "sha256": "11ad12707205d7bb523ad4147e78ebd8c1b4b51e0914113f98c214cc03c524ed",
+      "status": "Indexed",
+      "index_file": "./data/healthspring-directories/provider-pharmacy-directory-texas-valley-hmo.json"
+    }
+  ],
+  "scope_note": "Partial PDF extraction for suggestions, not live network verification. Regional sources remain separate. Only the NC PPO pilot has a verified comparison-plan attachment; other plan mappings require review."
+}

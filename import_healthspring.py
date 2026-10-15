@@ -103,7 +103,7 @@ def main():
             'cms_id': 'H7849-113-001', 'name': 'HealthSpring True Choice (PPO)', 'carrier': 'HealthSpring',
             'year': 2027, 'business': 'Medicare Advantage', 'state': 'NC', 'county_names': counties,
             'counties': [county_codes[('NC', name)] for name in counties], 'premium': '$0',
-            'benefit_metrics': metrics, 'benefit_unavailable': {'hearing': 'Not covered — routine hearing aids'},
+            'benefit_metrics': metrics, 'benefit_review_notes': {'otc': 'No OTC allowance verified in the checked plan sources; this is not a confirmed $0 benefit.', 'transportation': 'Annual free routine rides remain unverified. Ambulance and transplant travel benefits are separate.'}, 'benefit_unavailable': {'hearing': 'Not covered — routine hearing aids'},
             'special_needs': False, 'ma_only': False, 'drug_costs': costs, 'documents': documents,
             'network': [], 'directory_base_url': 'https://data.healthspring.healthlx.com:8003/',
             'network_mapping_status': '2027 network mapping unavailable; older-year records are not used.',

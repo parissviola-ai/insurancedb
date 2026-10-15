@@ -19,7 +19,7 @@ def extract(pdf_path):
         for block in blocks:
             text = block[4]
             lines = [s.strip() for s in text.splitlines() if s.strip()]
-            city = next((i for i, s in enumerate(lines) if re.search(r', NC \d{5}', s)), None)
+            city = next((i for i, s in enumerate(lines) if re.search(r', [A-Z]{2} \d{5}', s)), None)
             phone = next((re.search(r'\(\d{3}\) \d{3}-\d{4}', s).group() for s in lines if re.search(r'\(\d{3}\) \d{3}-\d{4}', s)), '')
             if city is None or not phone:
                 continue
