@@ -281,13 +281,13 @@
     {
       "name": "Highmark Wholecare",
       "phase": "Research",
-      "scope": "HMHS provider-directory specification reviewed · Wholecare applicability unverified",
+      "scope": "HMHS directory access verified · exact 2027 Wholecare applicability under review",
       "availability": "Not imported.",
       "benefits": "Not imported.",
       "medications": "Not imported.",
-      "providers": "Not connected. The specification supports Practitioner, PractitionerRole, Location, HealthcareService, Organization, OrganizationAffiliation and InsurancePlan resources, with network filters and pagination. Actual authorized responses and Wholecare coverage remain unverified.",
-      "connection": "Uploaded HMHS FHIRProviderDirectory v4.6 specification documents the HTTPS base apicms.hmhs.com/fhir/v4/providers and x-hmhs-keyId authentication. Tested HM metadata and HM/HMNY InsurancePlan requests returned HTTP 401; authenticated response reported the API key was not authorized. No directory data imported; credentials are excluded from the public site and repository.",
-      "next_step": "Confirm the application/key subscription and approval for this exact API and environment in the HMHS portal. Ask whether Highmark Wholecare is included and which partition to use. After access works, verify exact 2027 CMS plan/segment-to-network mappings before connecting coverage checks.",
+      "providers": "Authenticated plan searches return network Organization references. Sample Medicare-name results were National Medicare Advantage Dental records without coverage periods or CMS identifiers. These do not verify a 2027 Wholecare medical network. A Wholecare-name query returned zero in HMPAMS and a server error in HM; neither establishes absence from the full catalog.",
+      "connection": "The owner confirmed application approval and enabled the required API type. Authenticated metadata and InsurancePlan requests now return HTTP 200 using the documented API-key header. Initial authorization failure is resolved. API credentials remain outside the public repository and dashboard. No carrier records are imported into comparison yet.",
+      "next_step": "Identify the appropriate Highmark Wholecare Medicare partition and an exact 2027 CMS plan/segment record, keeping dental networks separate from medical networks. Then verify provider/facility network and office references. Any live dashboard connection must keep the API key in a private backend.",
       "links": [
         {
           "label": "HMHS provider-directory API portal",
