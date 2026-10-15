@@ -156,15 +156,20 @@
     },
     {
       "name": "Aetna",
-      "phase": "Not started",
-      "scope": "Medicare Advantage, Part D, Medigap and supplemental products requested; scope unverified",
-      "availability": "Not imported.",
+      "phase": "Research",
+      "scope": "Medicare API access request submitted \u00b7 awaiting Aetna review",
+      "availability": "No Aetna plan inventory imported. Exact 2027 CMS plan/segment availability remains unverified.",
       "benefits": "Not imported.",
-      "medications": "Not imported.",
-      "providers": "Not connected.",
-      "connection": "Not investigated.",
-      "next_step": "Confirm product/state scope and official data sources before importing.",
-      "links": []
+      "medications": "Not imported. Formulary API availability and access remain unverified.",
+      "providers": "Not connected. Aetna catalog lists Commercial and Medicare directory resources under /v1/providerdirectorydata/.",
+      "connection": "Production API access ticket submitted by the project owner. Aetna will review in 2\u20134 days, per the owner\u2019s update. Submitted October 14, 2026. Access has not been approved or tested. The provided /v1/providerdirectory/ example is a 2020 Medicaid record; it does not verify 2027 Medicare coverage.",
+      "next_step": "Await Aetna\u2019s review (estimated 2\u20134 days; calendar/business days not specified). After approval, confirm production authentication, retrieve a 2027 Medicare InsurancePlan, and verify its CMS plan/segment-to-network references before connecting provider searches.",
+      "links": [
+        {
+          "label": "Aetna Developer Portal",
+          "url": "https://developerportal.aetna.com/"
+        }
+      ]
     },
     {
       "name": "CareFirst",
