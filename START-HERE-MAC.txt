@@ -53,3 +53,6 @@ provider participation are not established by reading these PDFs.
 
 Search all automatically fills Aetna / UHC benefits from official plan PDFs.
 Allow extra time while the progress message shows plans being checked.
+
+If the usual port is busy, the launcher opens this copy on a free port.
+Use the browser window it opens. The comparison shows automatic PDFs v3.

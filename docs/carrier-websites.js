@@ -70,7 +70,7 @@ async function search(chosenCounty=''){
       link(item,c.source_url,'Carrier website');statuses.append(item);
     }
     carrierStatus.append(statuses);output.append(carrierStatus);
-    const documentTask=comparison.loadDocumentsAutomatically();
+    const documentTask=comparison.documentsReady;
     if(context.medications.length || context.providers.length){
       output.append(node('p','Open plan details for medication, provider and source information. “Not checked” does not mean “not covered.”'));
       await evaluateWebsiteCoverage(data.plans,context,signal,(plan,checks)=>{if(!signal.aborted&&!plan.document_data)comparison?.updateCoverage(plan.id,checks);});

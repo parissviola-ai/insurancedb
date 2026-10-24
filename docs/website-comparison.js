@@ -146,7 +146,7 @@ export function websiteComparison(container,data,plans,context,form,options={}){
     observer?.disconnect();coverageCells=new Map();detailCells=new Map();comparison.replaceChildren();detailList.replaceChildren();
     weights=Object.fromEntries(priorityKeys.map(k=>[k,Number(form.elements['weight_'+k].value)]));state.filters.includeSpecial=form.elements.special_needs.checked;
     ranked=visibleRanked(plans,weights,{...state.filters,needsDrugs:context.medications.length>0});
-    comparison.append(node('h3',`${plans.length} plans returned`),node('p',`${ranked.length} shown with the current carrier, product and special-needs filters. Change priorities above to update rankings without another website search.`));
+    comparison.append(node('p','Plan Finder · automatic PDFs v3','metadata'),node('h3',`${plans.length} plans returned`),node('p',`${ranked.length} shown with the current carrier, product and special-needs filters. Change priorities above to update rankings without another website search.`));
     const top=ranked.filter(r=>r.score!==null && Math.abs(r.score-ranked.find(x=>x.score!==null)?.score)<0.0001);
     if(top.length)comparison.append(node('p','Top benefit match'+(top.length>1?'es (tie)':'')+': '+top.map(r=>r.plan.name).join('; '),'recommendation'));
     else comparison.append(node('p','No ranking available for the current priorities. Review missing amounts or change priorities.'));
@@ -180,5 +180,9 @@ export function websiteComparison(container,data,plans,context,form,options={}){
   }
   carrierFilter.addEventListener('change',()=>{state.filters.carrier=carrierFilter.value;render();});productFilter.addEventListener('change',()=>{state.filters.business=productFilter.value;render();});
   const targets=[...priorityKeys.map(k=>form.elements['weight_'+k]),form.elements.special_needs];for(const target of targets)target.addEventListener('change',render);
-  render();return {loadDocumentsAutomatically:()=>loadPlanDocuments(plans),updateCoverage(id,checks){state.coverage.set(id,checks);const p=plans.find(p=>p.id===id);if(p)paintCoverage(p);},updateDocuments(id,result){const index=plans.findIndex(p=>p.id===id);const live=data.plans.find(p=>p.id===id);if(index<0||!live||result.carrier!==live.carrier||result.official_id!==live.official_id||result.year!==live.year||result.state!==live.state||result.zip!==data.location.zip||result.county!==data.location.county)throw new Error('PDF response did not match this plan and location.');live.document_data=result;live.review_sources={...live.review_sources,...result.review_sources};Object.assign(plans[index],comparisonPlans([live],options.inventory || {plans:[]})[0]);render();},destroy(){destroyed=true;observer?.disconnect();for(const target of targets)target.removeEventListener('change',render);}};
+  render();
+  // Start after returning the instance so the controller's document callback
+  // can update it. Rendering a comparison always starts its own document work.
+  const documentsReady=Promise.resolve().then(()=>loadPlanDocuments(plans));
+  return {documentsReady,loadDocumentsAutomatically:()=>documentsReady,updateCoverage(id,checks){state.coverage.set(id,checks);const p=plans.find(p=>p.id===id);if(p)paintCoverage(p);},updateDocuments(id,result){const index=plans.findIndex(p=>p.id===id);const live=data.plans.find(p=>p.id===id);if(index<0||!live||result.carrier!==live.carrier||result.official_id!==live.official_id||result.year!==live.year||result.state!==live.state||result.zip!==data.location.zip||result.county!==data.location.county)throw new Error('PDF response did not match this plan and location.');live.document_data=result;live.review_sources={...live.review_sources,...result.review_sources};Object.assign(plans[index],comparisonPlans([live],options.inventory || {plans:[]})[0]);render();},destroy(){destroyed=true;observer?.disconnect();for(const target of targets)target.removeEventListener('change',render);}};
 }

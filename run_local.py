@@ -1,5 +1,6 @@
 """Start the local dashboard; install its pinned browser dependencies on first run."""
 import argparse
+import errno
 import json
 import os
 from pathlib import Path
@@ -84,9 +85,16 @@ def main():
         app.initialize()
         try:
             server = ThreadingHTTPServer(('127.0.0.1', args.port), app.Handler)
-        except OSError:
-            raise RuntimeError(f'Port {args.port} is already in use. If Plan Finder is already open, use http://127.0.0.1:{args.port}/dashboard/ . Otherwise close the other program and try again.')
-        url = f'http://127.0.0.1:{args.port}/dashboard/'
+        except OSError as error:
+            if error.errno != errno.EADDRINUSE:
+                raise
+            # Bind first, then open this server's URL. An occupied port may
+            # belong to an older extracted copy or an unrelated application.
+            server = ThreadingHTTPServer(('127.0.0.1', 0), app.Handler)
+            print(f'Port {args.port} is in use. This copy will use port {server.server_port}.', flush=True)
+        url = f'http://127.0.0.1:{server.server_port}/dashboard/'
+        print('Application folder: ' + str(ROOT), flush=True)
+        print('Version: automatic PDFs v3', flush=True)
         print('\nPlan Finder is running on this Mac only.', flush=True)
         print('Open: ' + url, flush=True)
         print('Keep this Terminal window open. Press Control+C here to stop.\n', flush=True)
