@@ -55,4 +55,4 @@ Search all automatically fills Aetna / UHC / HealthSpring benefits from official
 Allow extra time while the progress message shows plans being checked.
 
 If the usual port is busy, the launcher opens this copy on a free port.
-Use the browser window it opens. The comparison shows automatic PDFs v3.
+Use the browser window it opens. The comparison shows ZIP-based plan details v4.

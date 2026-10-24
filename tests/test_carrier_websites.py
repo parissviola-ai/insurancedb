@@ -131,6 +131,32 @@ class CarrierWebsiteTests(unittest.TestCase):
         with patch.object(c,'get_json',side_effect=[[{'SessionID':'fixture'}],{'MedicarePlans':[row]}]):
             self.assertTrue(c.healthspring_plans(LOC)[0]['special_needs'])
 
+    def test_drx_detail_adapter_is_conservative_about_quarterly_benefits(self):
+        r=c.plan('Highmark Wholecare','H1234-001-000','Fixture',LOC,'https://example.com')
+        c.shopping_benefits(r,1000)
+        raw={'drugDeductible':700,'planDataFields':[
+            {'name':'Over-the-Counter Items (In Network)','type':'In Network','description':'In-Network: $0 copay; Maximum plan benefit coverage of $35 every 3 month.'},
+            {'name':'Doctor Specialty Visit (In Network)','type':'In Network','description':'In-Network: $25 copay per visit'},
+            {'name':'Inpatient Hospital Care (In Network)','type':'In Network','description':'In-Network: $225 copay per day for days 1-5, $0 copay per day for days 6-90.'}]}
+        c.drx_benefits(r,raw)
+        self.assertEqual(r['shopping_metrics']['otc']['amount'],35)
+        self.assertEqual(r['shopping_metrics']['specialist']['amount'],25)
+        self.assertEqual(r['shopping_metrics']['hospital']['amount'],1125)
+        self.assertIn('$700',r['drug_details'][0]['description'])
+        raw['planDataFields'][0]['description']='In-Network: $35 per month for qualifying members.'
+        c.shopping_benefits(r);c.drx_benefits(r,raw)
+        self.assertNotIn('otc',r['shopping_metrics'])
+
+    def test_pdp_details_keep_medical_metrics_empty_and_pharmacy_conditions_explicit(self):
+        r=c.plan('HealthSpring','S5715-029-000','Assurance',LOC,'https://example.com',business='Part D')
+        c.shopping_benefits(r,0)
+        c.healthspring_benefits(r,{'DrugDeductible':700,'FormularyExternalID':'27061','FormularyTiers':[{'TierDescription':'Tier 3','CopayPrices':[{'Cost':0.22,'CostType':2,'DaysOfSupply':30,'DefaultBenefit':True,'IsMailOrder':False,'IsPreferredPharmacy':True}]}]})
+        self.assertEqual(r['shopping_metrics'],{})
+        self.assertEqual(r['formulary_id'],'27061')
+        self.assertIn('22% coinsurance',r['drug_details'][1]['description'])
+        self.assertIn('preferred retail',r['drug_details'][1]['description'])
+        self.assertIn('Not an exact prescription quote',r['drug_details'][1]['description'])
+
     def test_uhc_exact_location_year_and_zero_premium(self):
         values={'selectedCounty':{'zipCode':'28202','stateCode':'NC','fipsStateCode':'37','fipsCountyCode':'119'},
                 'maPlansCount':1,'pdpPlansCount':0,'pdpPlans':[],

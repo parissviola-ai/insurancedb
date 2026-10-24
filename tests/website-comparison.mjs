@@ -50,3 +50,12 @@ assert.equal(withPDF.benefit_metrics.vision,undefined);assert.equal(withPDF.bene
 const wrongPDF=comparisonPlans([{...live,document_data:{...pdfResult,official_id:'H9999-999-999'}}],{plans:[saved]})[0];
 assert.equal(wrongPDF.benefit_metrics.dental.amount,1000);
 console.log('PDF comparison updates preserve source binding, live premium and nonannual benefit exclusions.');
+const drugLive={...live,business:'Part D',drug_details:[{label:'Drug deductible',description:'$700 per year; tier rules apply.',source_url:live.source_url}]};
+const drugPlan=comparisonPlans([drugLive],{plans:[]})[0];
+assert.equal(drugPlan.drug_details[0].description,'$700 per year; tier rules apply.');
+const drugSheets=exportSheets(state,[{plan:drugPlan,score:null,reason:'Compare separately'}],{});
+const comparisonSheet=drugSheets.find(s=>s.name==='Plan comparison');
+const detailIndex=comparisonSheet.rows[0].indexOf('Drug coverage details');
+assert(detailIndex>=0);assert(comparisonSheet.rows[1][detailIndex].includes('$700'));
+for(const sheet of drugSheets)for(const row of sheet.rows)assert.equal(row.length,sheet.rows[0].length);
+console.log('Part D drug benefit details remain source-linked in comparison and Excel.');

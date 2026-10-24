@@ -186,12 +186,25 @@ def healthspring_plans(loc):
 
 def healthspring_benefits(record, raw):
     """Comparable amounts explicitly returned for this exact public plan."""
-    if record['business'] != 'Medicare Advantage':return
     metrics=record['shopping_metrics'];review=record.setdefault('benefit_review_notes',{})
     source=record['source_url']
     def add(key,value,period,notes):
         metrics[key]={'amount':value,'period':period,'notes':notes,'source_url':source}
-    for row in raw.get('PlanDataFields',[]):
+    deductible=raw.get('DrugDeductible')
+    if record.get('has_drug_coverage') is not False and type(deductible) in (int,float) and math.isfinite(deductible) and deductible>=0:
+        record['drug_details']=[{'label':'Drug deductible','description':f'${deductible:,.2f} per year. Tier exemptions and other conditions may apply; confirm the plan document.','source_url':source,'source_retrieved_at':record['checked_at']}]
+    formulary_id=str(raw.get('FormularyExternalID') or '')
+    if re.fullmatch(r'[0-9]+',formulary_id):record['formulary_id']=formulary_id
+    for tier in raw.get('FormularyTiers') or []:
+        for price in tier.get('CopayPrices',[]):
+            cost=price.get('Cost');days=price.get('DaysOfSupply')
+            if not price.get('DefaultBenefit') or type(cost) not in (int,float) or not math.isfinite(cost) or cost<0 or type(days) is not int or not 1<=days<=90:continue
+            if type(price.get('IsMailOrder')) is not bool or type(price.get('IsPreferredPharmacy')) is not bool:continue
+            if price.get('CostType')==1:value=f'${cost:,.2f} copay'
+            elif price.get('CostType')==2 and cost<=1:value=f'{cost*100:g}% coinsurance'
+            else:continue
+            record.setdefault('drug_details',[]).append({'label':tier.get('TierDescription') or 'Drug tier','description':f"{value} for a {days}-day supply at a {'preferred' if price['IsPreferredPharmacy'] else 'standard'} {'mail-order' if price['IsMailOrder'] else 'retail'} network pharmacy. Plan-listed tier schedule; deductible and coverage-stage rules apply. Not an exact prescription quote.",'source_url':source,'source_retrieved_at':record['checked_at']})
+    for row in raw.get('PlanDataFields',[]) if record['business']=='Medicare Advantage' else []:
         if row.get('Type')!='In Network':continue
         name=row.get('Name','');description=unescape(re.sub(r'<[^>]+>',' ',row.get('Description') or ''))
         description=' '.join(description.split())
@@ -222,8 +235,22 @@ def healthspring_benefits(record, raw):
         types={t.get('Name') for t in doc.get('Types',[])}
         if 'NON_ENGLISH' in types:continue
         kind=next((kinds[t] for t in types if t in kinds),None);url=doc.get('Url','');parsed=urlparse(url)
-        if kind and parsed.scheme=='https' and parsed.hostname=='www.healthspring.com' and not parsed.username and not parsed.password and parsed.path.startswith(f"/static/docs/medicare/plans/{record['year']}/") and record['official_id'].lower() in parsed.path.lower():
-            record['documents'].append({'kind':kind,'label':doc.get('Name',kind),'url':url,'metadata_checked_at':record['checked_at']})
+        if kind and parsed.scheme=='https' and parsed.hostname=='www.healthspring.com' and not parsed.username and not parsed.password and parsed.path.startswith(f"/static/docs/medicare/plans/{record['year']}/") and (record['official_id'].lower() in parsed.path.lower() or (record['business']=='Part D' and parsed.path.endswith('/sb-pdp.pdf'))):
+            record['documents'].append({'kind':kind,'label':doc.get('Name',kind),'url':url,'metadata_checked_at':record['checked_at'],'shared_document':record['business']=='Part D' and record['official_id'].lower() not in parsed.path.lower()})
+
+
+def drx_benefits(record,raw):
+    fields=[]
+    for row in raw.get('planDataFields',[]):
+        description=re.sub(r'^In-Network:\s*','',row.get('description') or '',flags=re.I)
+        converted={'Name':row.get('name'),'Description':description,'Type':row.get('type')}
+        if row.get('name')=='Inpatient Hospital Care (In Network)':
+            converted['Range']=[{'RangeMin':int(m[2]),'RangeMax':int(m[3]),'Amount':float(m[1].replace(',','')),'AmountType':1} for m in re.finditer(r'\$([0-9][0-9,]*(?:\.[0-9]{1,2})?) copay per day for days ([0-9]+)-([0-9]+)',description)]
+        if row.get('name')=='Over-the-Counter Items (In Network)':
+            match=re.fullmatch(r'\$0 copay; Maximum plan benefit coverage of \$([0-9][0-9,]*(?:\.[0-9]{1,2})?) every 3 months?\.?',description)
+            if match:converted['Description']='$'+match[1]+' every 3 months.'
+        fields.append(converted)
+    healthspring_benefits(record,{'PlanDataFields':fields,'DrugDeductible':raw.get('drugDeductible')})
 
 
 def apply_aetna_prices(plans, rows, products, year):
@@ -357,6 +384,7 @@ def uhc_plans(loc):
             output[-1]['review_sources'] = {'medication': source + ('#PDP' if p['planType'] == 'PDP' else '#MA'),
                 'provider': 'https://findcare.guest.uhc.com/guest-plan-selection/browse?deeplink=eyJsYW5ndWFnZSI6ImVuLVVTIiwibG9iIjoiTVIifQ==',
                 'pharmacy': 'https://www.aarpmedicareplans.com/health-plans/aarp-pharmacy.html#/Pharmacy-Search-English'}
+            output[-1]['drug_details']=[{'label':r.get('benefitName') or r.get('benefitCategory') or 'Drug cost sharing','description':re.sub(r'<[^>]+>',' ',unescape(str(r.get('benefitDescription','')))).replace('[~/n~]',' · '),'source_url':detail,'source_retrieved_at':output[-1]['checked_at']} for r in p.get('partDBenefit') or [] if r.get('benefitDescription')]
             if p['planType'] in ('MA', 'MAPD', 'PDP'):
                 output[-1]['has_drug_coverage'] = p['planType'] != 'MA'
     return output
@@ -404,6 +432,7 @@ def drx_plans(carrier, loc, result=None):
         if isinstance(p.get('hasDrugCoverage'), bool):
             output[-1]['has_drug_coverage'] = p['hasDrugCoverage']
         shopping_benefits(output[-1], p.get('maximumOutOfPocketCost'))
+        drx_benefits(output[-1],p)
     return output
 
 

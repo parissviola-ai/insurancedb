@@ -34,6 +34,24 @@ class PlanDocumentTests(unittest.TestCase):
         metrics,_,_=docs.parse_benefits('Maximum Coverage Amount $2,000 yearly allowance for hearing aids.','https://example.com/sb.pdf')
         self.assertNotIn('dental',metrics)
 
+    def test_shared_silverscript_source_only_supplies_uniform_drug_wording(self):
+        plan={**PLAN,'carrier':'Aetna','official_id':'S5601-016','name':'SilverScript Choice (PDP) S5601-016','business':'Part D'}
+        url='https://www.aetna.com/medicare/documents/individual/2027/sb/en/Y0001_S5601_SB_2027_M.pdf'
+        text='2027 Summary of Benefits SilverScript Choice (PDP)\nAnnual deductible                  $700\nNorth Carolina $143.50 $0 $7 23% 34% 25%'
+        docs.verified_text(text,plan,'benefits',url)
+        details=docs.parse_drug_details(text,url,'2026-10-24')
+        self.assertIn('$700',details[0]['description'])
+        self.assertNotIn('$143.50',details[0]['description'])
+        with self.assertRaises(ValueError):docs.verified_text(text,{**plan,'name':'SilverScript Another (PDP)'},'benefits',url)
+        with self.assertRaises(ValueError):docs.verified_text(text,plan,'benefits',url.replace('S5601','S9999'))
+
+    def test_drug_deductible_preserves_tier_exemptions(self):
+        text='Annual Prescription Drug Deductible$0 per year for Tier 1 and Tier 2; $300 for Tier 3, Tier 4\n and Tier 5 Part D prescription drugs.\n\nWhat is coinsurance?'
+        rows=docs.parse_drug_details(text,'https://example.com/sb.pdf','2026-10-24')
+        self.assertIn('$300',rows[0]['description'])
+        self.assertIn('Tier 1 and Tier 2',rows[0]['description'])
+        self.assertNotIn('What is',rows[0]['description'])
+
     def test_identity_year_and_cover_name(self):
         text='Summary of Benefits 2027\nH1234-001-000\nAARP Medicare Advantage from UHC NC-15 (HMO-POS)'
         docs.verified_text(text,PLAN,'benefits')

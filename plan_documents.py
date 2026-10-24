@@ -90,7 +90,7 @@ def document_catalog(plan,loc):
             if not kind:continue
             url=pdf_url(row['PDFLink'])
             if f"/{loc['year']}/" not in urlparse(url).path:continue
-            docs.append({'kind':kind,'label':row['PDFName'],'url':url,'metadata_checked_at':carriers.now()})
+            docs.append({'kind':kind,'label':row['PDFName'],'url':url,'metadata_checked_at':carriers.now(),'shared_document':plan.get('business')=='Part D' and plan['official_id'] not in url})
         return docs
     source=plan['source_url'];html=carriers.read(source)
     match=re.search(r'\bplanInfo\s*:\s*',html)
@@ -125,6 +125,11 @@ def verified_text(text,plan,kind,url=None):
     if kind=='formulary':return  # Explicit plan-bound carrier catalog supplies shared formulary linkage.
     identity=plan['official_id']
     compact=re.sub(r'[_\s]+','-',header)
+    shared_silverscript=(plan['carrier']=='Aetna' and plan.get('business')=='Part D' and
+        re.fullmatch(r'S5601-\d{3}',identity) and 'silverscript choice' in plan['name'].lower() and url and
+        re.fullmatch(r'/medicare/documents/individual/'+year+r'/(?:sb/en/Y0001_S5601_SB_'+year+r'_M|eoc/en/Y0001_S5601_CHOICE_EOC'+year+r'_C)\.pdf',urlparse(pdf_url(url)).path) and
+        'silverscript choice' in ' '.join(header.lower().split()))
+    if shared_silverscript:return  # Only uniform drug wording is read from this shared source.
     if identity not in compact:
         # HealthSpring sometimes prints contract/PBP only. The full segment
         # must also be supplied by its exact-plan public catalog and filename.
@@ -254,6 +259,18 @@ def parse_benefits(text,url):
     return metrics,notes,unavailable
 
 
+def parse_drug_details(text,url,retrieved_at):
+    """Keep tier-specific deductible wording intact instead of reducing it to one number."""
+    results=[]
+    for pattern in [r'Annual Prescription Drug Deductible[^\f]{0,450}?(?=\n\s*\n|\f)',r'Annual deductible[ \t]+\$[0-9,]+(?:\.[0-9]{1,2})?']:
+        match=re.search(pattern,text,re.I)
+        if not match:continue
+        value=re.sub(r'Deductible(?=\$)','Deductible: ',' '.join(match.group().split()),flags=re.I)
+        results.append({'label':'Drug deductible','description':value,'source_url':url+'#page='+str(text[:match.start()].count('\f')+1),'source_retrieved_at':retrieved_at})
+        break
+    return results
+
+
 def formulary_rows(text,carrier):
     rows=[]
     for page_number,page in enumerate(text.split('\f'),1):
@@ -294,7 +311,7 @@ def lookup(params):
         if not plan:raise ValueError('This exact plan was not returned for the selected location and year')
         docs=document_catalog(plan,loc)
         if not docs:raise ValueError('No plan-specific documents were returned by the carrier.')
-        result={**loc,'carrier':name,'official_id':identity,'documents':docs,'benefit_metrics':{},'benefit_review_notes':{},'benefit_unavailable':{},'formularies':{},'issues':[],'review_sources':dict(plan.get('review_sources',{}))}
+        result={**loc,'carrier':name,'official_id':identity,'documents':docs,'benefit_metrics':{},'benefit_review_notes':{},'benefit_unavailable':{},'formularies':{},'drug_details':[],'issues':[],'review_sources':dict(plan.get('review_sources',{}))}
         directory=next((d for d in docs if d['kind']=='provider_directory'),None)
         if directory:result['review_sources']['provider']=directory['url']
         for kind in ('benefits','evidence','formulary'):
@@ -306,6 +323,9 @@ def lookup(params):
                 if kind=='formulary':
                     result['formularies'][doc['url']]={**metadata,'rows':formulary_rows(text,name),'partial':True}
                 else:
+                    if plan.get('business')=='Part D':
+                        result['drug_details'].extend(parse_drug_details(text,doc['url'],metadata['retrieved_at']))
+                        continue
                     metrics,notes,unavailable=parse_benefits(text,doc['url'])
                     if kind=='evidence':
                         metrics={k:v for k,v in metrics.items() if k in ('dental','moop','otc')}
@@ -322,6 +342,10 @@ def lookup(params):
             except Exception as error:
                 doc['identity_verified']=False
                 result['issues'].append(doc['label']+': '+(str(error) if isinstance(error,(ValueError,RuntimeError)) else 'Download or extraction unavailable.'))
-                if kind=='benefits':break  # A mismatched SB must not attach a different plan's companion files.
+                if kind=='benefits' and plan.get('business')!='Part D':break  # A mismatched SB must not attach a different plan's companion files.
+        reviewed=[doc for doc in docs if doc['kind'] in ('benefits','evidence') and doc.get('identity_verified')]
+        if plan.get('business','Medicare Advantage')=='Medicare Advantage' and reviewed and 'otc' not in result['benefit_metrics'] and 'otc' not in result['benefit_unavailable']:
+            result['benefit_unavailable']['otc']='No separate OTC amount found in reviewed documents'
+            result['benefit_review_notes']['otc']='No numeric OTC allowance was extracted from the verified documents. This is not a determination that OTC benefits are excluded; review the linked sources.'
         return result
     finally:_slots.release()

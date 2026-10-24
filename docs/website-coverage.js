@@ -13,7 +13,7 @@ export function preparedPlan(plan,inventory){
   return matches.length===1?matches[0]:null;
 }
 export function nameCandidate(source,query){
-  const ignored=new Set(['capsule','capsules','tablet','tablets','suspension','susp','reconstituted','oral','solution','injection','extended','release','immediate','chewable','selected','strength','potassium','hydrochloride']);
+  const ignored=new Set(['capsule','capsules','caps','tablet','tablets','tabs','suspension','susp','reconstituted','oral','solution','injection','extended','release','immediate','chewable','selected','strength','potassium','hydrochloride']);
   const tokens=(query.toLowerCase().match(/[a-z]{4,}/g) || []).filter(t=>!ignored.has(t));
   if(!tokens.length)return false;
   const text=source.toLowerCase();return tokens.every(t=>text.includes(t));
@@ -62,10 +62,12 @@ export async function evaluateWebsiteCoverage(plans,context,signal,onUpdate=()=>
       for(const p of plans.filter(p=>p.carrier==='HealthSpring' && p.year===library.year)){
         if(matched.get(p.id))continue;
         const id=officialId(p),mapping=library.plan_links[p.state+':'+id];
-        if(!id || !mapping)continue;
-        const urls=mapping.urls.filter(url=>library.documents[url]?.applicable_cms_ids?.includes(id));
-        if(!urls.length && mapping.status!=='No included Part D')continue;
-        matched.set(p.id,{...p,cms_id:id,ma_only:mapping.status==='No included Part D',documents:urls.map(url=>({kind:'formulary',url,retrieved_at:library.documents[url].retrieved_at}))});
+        if(!id)continue;
+        const exactFormulary=String(p.formulary_id || '').replace(/^0+/,'');
+        const urls=exactFormulary?Object.keys(library.documents).filter(url=>String(library.documents[url].formulary_id || '').replace(/^0+/,'')===exactFormulary):(mapping?.urls || []).filter(url=>library.documents[url]?.applicable_cms_ids?.includes(id));
+        if(!mapping&&!urls.length)continue;
+        if(!urls.length && mapping?.status!=='No included Part D')continue;
+        matched.set(p.id,{...p,cms_id:id,document_search:Boolean(exactFormulary),ma_only:mapping?.status==='No included Part D',documents:urls.map(url=>({kind:'formulary',url,retrieved_at:library.documents[url].retrieved_at}))});
         formularies={...formularies,...Object.fromEntries(urls.map(url=>[url,library.documents[url]]))};
       }
     }catch{/* Other carriers and already imported plans remain usable. */}

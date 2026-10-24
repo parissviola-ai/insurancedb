@@ -474,3 +474,37 @@ and pharmacy links open the carrier tools; exact pharmacy quotes remain unconnec
 Live validation: H9725-009-003 in ZIP 28697/Wilkes returned dental $1,450 and OTC
 $45/quarter; H9725-003-000 in ZIP 28262/Mecklenburg returned dental $2,000 and OTC
 $140/quarter. These are different plan segments and are never interchanged.
+
+Plan details use the selected ZIP/county/year across the 15 configured states;
+there is no separate statewide bulk crawler or new hosting requirement. Public
+Connecture responses for Highmark/Wholecare, Molina and Excellus now retain only
+whitelisted benefit descriptions and drug-deductible fields. Supported comparable
+specialist, hospital and quarterly OTC facts update the same comparison. Unknown,
+monthly, conditional or ambiguous amounts are not coerced into quarterly amounts.
+
+Standalone Part D plans have their own compact drug-plan table, source-linked drug
+benefit sections in plan details, and drug details in Excel. UHC tier labels retain
+public pharmacy qualifiers. HealthSpring deductible/tier schedules preserve supply,
+preferred/standard and retail/mail conditions; these are not prescription quotes.
+HealthSpring regional PDPs can use the existing dated formulary book only when its
+identifier exactly matches the live plan's FormularyExternalID and year. This
+avoids guessing a regional CMS-to-formulary mapping. SilverScript Choice's shared
+contract-family booklet supplies only uniform deductible wording, not state-varying
+premiums or tier amounts; its exact plan-bound catalog separately supplies formulary
+candidates. A drug-plan summary failure no longer blocks independent catalog-bound
+formulary reading. Medical-plan identity failures still stop companion processing.
+
+If reviewed plan-bound PDFs yield no OTC amount, the cell says "No separate OTC
+amount found in reviewed documents"; missing imported OTC facts say "No verified
+OTC amount in saved documents". Neither means OTC is excluded or worth $0. Standalone
+Part D plans retain "Not applicable" for medical/OTC columns. Live validation of
+2027 ZIP 28697 verified S5601-016 ($700 deductible), S5921-390-000 ($0 for tiers 1/2,
+$300 for tiers 3/4/5), S5921-353-000 ($700), and S5715-029-000 ($700 public deductible
+with pharmacy-specific tier schedules and exact formulary ID 27061). The UHC and
+SilverScript PDF checks also extracted independent formulary candidate rows.
+Carrier availability, product scope and quote-only/unconnected sources still show
+explicit statuses; these changes do not imply every carrier has a full parser.
+
+Plan names in both the carrier comparison and the Part D table open and scroll to
+the corresponding lower details section. Mouse and keyboard activation focus the
+summary, and the open state is retained when automatic document updates rerender.

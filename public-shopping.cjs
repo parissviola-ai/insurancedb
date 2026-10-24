@@ -28,8 +28,8 @@ async function main(){
         if(!Array.isArray(data.data)||data.totalCount!==data.data.length){finish({error:'incomplete',message:'The shopping site returned incomplete or changed plan results.'});return;}
         // Keep only plan facts needed by the dashboard; omit anonymous session
         // tokens, marketing history, and pharmacy/provider/medication data.
-        const keys=['id','contractId','planId','segmentId','planYear','planName','carrierName','annualPlanPremium','planType','planTypeAbbreviation','planSNPCategories','hasDrugCoverage','maximumOutOfPocketCost'];
-        finish({source_url:source,plans:data.data.map(p=>Object.fromEntries(keys.map(k=>[k,p[k]])))});
+        const keys=['id','contractId','planId','segmentId','planYear','planName','carrierName','annualPlanPremium','planType','planTypeAbbreviation','planSNPCategories','hasDrugCoverage','maximumOutOfPocketCost','drugDeductible','planDataFields'];
+        finish({source_url:source,plans:data.data.map(p=>Object.fromEntries(keys.map(k=>[k,k==='planDataFields'?(p[k] || []).map(r=>({name:r.name,description:r.description,type:r.type,isCovered:r.isCovered})):p[k]])))});
       }catch{finish({error:'response_changed',message:'The public shopping result could not be verified.'});}
     });
     await page.goto(source,{waitUntil:'domcontentloaded',timeout:45000});

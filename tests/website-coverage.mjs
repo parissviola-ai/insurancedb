@@ -71,3 +71,16 @@ assert.equal(pdfChecks.get(aetnaPDF.id).medications[0].result_type,'formulary_ca
 const wrongDoc={...aetnaPDF,document_data:{...aetnaPDF.document_data,year:2026}};
 assert.equal((await evaluateWebsiteCoverage([wrongDoc],pdfContext,new AbortController().signal)).get(wrongDoc.id).medications[0].status,'not_connected');
 console.log('Official document drug candidates match ingredient text without asserting exact prescription equivalence.');
+// A live carrier-supplied formulary ID can bind a regional PDP to a shared book.
+const assuranceEntry=Object.entries(library.documents).find(([url])=>url.includes('formulary-assurance.pdf'));
+const [assuranceUrl,assurance]=assuranceEntry;
+const regional={id:'hs-pdp',official_id:'S5715-029-000',carrier:'HealthSpring',year:2027,state:'NC',business:'Part D',formulary_id:String(Number(assurance.formulary_id))};
+const regionalContext={medications:[{name:assurance.rows[0].name,manual:false}],providers:[],loadData:async()=>[{plans:[]},{},{}]};
+const regionalChecks=await evaluateWebsiteCoverage([regional],regionalContext,new AbortController().signal);
+assert.equal(regionalChecks.get(regional.id).medications[0].status,'review_required');
+assert(regionalChecks.get(regional.id).medications[0].matches[0].source_url.startsWith(assuranceUrl));
+const wrongId={...regional,formulary_id:'99999999'};
+assert.equal((await evaluateWebsiteCoverage([wrongId],regionalContext,new AbortController().signal)).get(regional.id).medications[0].status,'not_connected');
+const oldYear={...regional,year:2026};
+assert.equal((await evaluateWebsiteCoverage([oldYear],regionalContext,new AbortController().signal)).get(regional.id).medications[0].status,'not_connected');
+console.log('Regional PDP formulary checks require the exact live formulary ID and current library year.');
