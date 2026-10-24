@@ -213,3 +213,125 @@ Do not infer exclusions from missing extracted records. Where the prepared ZIP
 lookup is missing, select NY and confirm the county manually. Optional dental
 costs extra and is not scored as a base allowance; OTC remains unverified. Exact
 CMS-to-internal-FHIR network mapping is awaiting Excellus support.
+
+### Search all public carrier websites
+
+Run `python3 app.py` and open `http://127.0.0.1:8000/dashboard/` for the current
+dashboard with the local backend. The static GitHub Pages dashboard reports that
+it is not connected to the private backend; this change does not deploy one.
+
+Enter a ZIP once and click **Search all carrier websites**. A public ZIP lookup
+resolves county/state within the existing `app.STATES` list: NC, SC, GA, FL, AL,
+TN, VA, KY, LA, TX, OH, PA, DE, MI, NY. Ambiguous ZIPs require county selection;
+an existing county selection is reused by exact name after public revalidation.
+The public FIPS code is never substituted for Devoted's SSA code.
+
+The backend concurrently queries Aetna, Devoted Health, HealthSpring,
+UnitedHealthcare / AARP, Highmark, Highmark Wholecare, Molina and Excellus
+BlueCross BlueShield. Highmark/Wholecare share one public shopping request and
+are separated by source carrier/contract identity. Former Cigna Medicare is
+included under HealthSpring without duplicate plans; separate Cigna commercial
+shopping is not connected. Public CareFirst, Medico/Wellabe and Guarantee Trust
+Life entries are also checked, but cannot yet supply verified ZIP/year plan lists:
+CareFirst's Medicare entry returned a missing-page response during validation;
+Medico/Wellabe accepts a ZIP but directs users to an agent; the reviewed GTL
+supplement page is a product/agent entry rather than ZIP/year shopping results.
+These limitations are explicit per-carrier results, never successful empty searches.
+
+The combined table includes Medicare Advantage and Part D records with official
+IDs, source links and actual retrieval timestamps. Premiums stay unverified when
+not retrieved. Special-needs listings retain eligibility warnings. Medigap and
+supplement quotes are not supplied by the current plan-list connectors, even when
+carrier websites advertise those products. Broader product coverage is unfinished.
+Selected medications and providers now feed the website result checks described below.
+Imported comparisons remain available separately.
+
+`/api/carrier-websites?zip=28202&year=2027` returns one status per requested carrier,
+verified plans, location, and `complete: false` while any source cannot complete a
+plan search. `checked_at` is set only for successful plan retrieval. Quote/site
+checks can supply `source_checked_at`, with `checked_at: null`. Use returned FIPS
+county codes on subsequent ambiguous-ZIP requests. `/api/carrier-locations` exposes
+the same public ZIP resolution. No request text, secrets or raw upstream errors are
+logged or returned. There are no portal logins or stored browser sessions.
+
+Browser setup for Highmark/Wholecare, Molina and Excellus:
+
+```sh
+npm install
+npx playwright install chromium
+python3 app.py
+```
+
+A managed runtime can set `SHOPPING_CHROMIUM_PATH` to its installed Chromium.
+Only container runtimes requiring it should set `SHOPPING_CHROMIUM_NO_SANDBOX=1`.
+TLS verification stays enabled and inherited proxy settings are preserved.
+Anonymous browser contexts are isolated and destroyed after each search.
+The other plan connectors use Python's standard HTTPS libraries. Each search is
+bounded; failures are isolated and successful carrier results are retained.
+
+Live validation October 24, 2026: ZIP 28202 / Mecklenburg NC returned 9 Aetna,
+12 Devoted, 7 HealthSpring and 16 UHC MA/Part D plans. ZIP 15222 / Allegheny PA
+returned 14 Highmark and 2 Wholecare plans. ZIP 29201 / Richland SC returned one
+Molina plan. ZIP 14604 / Monroe NY returned four Excellus MA plans. These are
+test locations, not proof of complete inventory in every configured state.
+Official public shopping formats can change; unexpected schemas, wrong years,
+county mismatches and incomplete lists withhold affected results.
+
+Validation: `python3 -m unittest discover -s tests -v`,
+`node --check docs/carrier-websites.js`, `node --check public-shopping.cjs`.
+The loopback development server is not a deployed private service; hosted use
+still requires HTTPS and access controls. Credentials and private-support files
+must stay outside the repository.
+
+
+### Medication/provider checks in the combined ZIP search
+
+The website result table reuses the existing medication and provider selections.
+Its public plan-list backend request still sends location only. Medication matching
+runs locally; existing Devoted provider queries use its public directory. No member
+identifiers are sent with these requests. Changing selections invalidates previous
+website checks.
+
+Prepared data attaches only when carrier, full CMS contract/PBP/segment, state and
+year match. There is no plan-name, contract-only, or earlier-year fallback. Medication
+results reuse dated Devoted, HealthSpring and Excellus formularies where an exact
+mapping exists. The all-state HealthSpring formulary library is also reused through
+its explicit CMS segment applicability IDs. Shared PDP documents without confirmed
+regional CMS linkage remain unconnected. Matches retain PDF pages, tiers, restrictions
+and retrieval dates; they remain candidates requiring exact strength/form, pharmacy
+and current coverage review. No new drug cost estimates are calculated.
+
+Devoted provider checks reuse the live directory and exact imported plan-network
+mapping. PDF selections from other carriers are not treated as Devoted resource IDs.
+HealthSpring/Excellus dated PDF candidates attach only to their explicitly mapped
+2027 plans and states; ambiguous identity/office or missing listings remain unverified.
+A plan's home ZIP selects its service area; it does not restrict a provider to that
+home ZIP. Standalone Part D plans are not treated as medical provider networks.
+
+Automated medication/provider checks for Aetna, Highmark, Wholecare, Molina and UHC,
+and for unmatched HealthSpring/Excellus segments, are still not connected. Their
+rows say so explicitly and link back to the carrier source for review. A successful
+plan-list search is never treated as successful drug coverage or provider participation.
+
+Run `node tests/website-coverage.mjs` plus the existing Python and Node checks.
+Browser validation uses fixture directory responses and the prior 44-plan shopping
+response to verify selection reuse, per-plan results, stale-result invalidation,
+location-only shopping requests and explicit unconnected-source messages.
+
+### Optional Medicare member coverage review
+
+The dashboard links to the member's official Medicare account and the supplied
+account-recovery page. These links do not read coverage into the dashboard and do
+not collect Medicare/MBI numbers, last names, birthdates or passwords. The recovery
+page is not a public enrollment/plan lookup API.
+
+A future Medicare data connection requires an approved CMS Blue Button application,
+a private confidential OAuth backend, and the enrollee's Medicare.gov sign-in and
+authorization. No CMS application credentials or production approval are configured
+here. Do not implement a name/DOB/MBI form as if it can retrieve enrollment through
+account recovery. Coverage returned by an approved connection must be evaluated for
+what it actually establishes, including applicable dates and exact carrier/plan
+identifiers, before attaching any current plan or network claim.
+
+Official references: https://bluebutton.cms.gov/api-documentation/authorization/
+and https://bluebutton.cms.gov/production-access/ .

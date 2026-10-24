@@ -1,0 +1,9 @@
+{
+  "name": "fern-and-moss-public-shopping",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Server-side anonymous public carrier shopping browsers",
+  "dependencies": {
+    "playwright": "1.62.1"
+  }
+}

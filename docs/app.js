@@ -1,3 +1,4 @@
+import {registerSearchContext} from './search-context.js';
 import {pdfMatches} from './healthspring-providers.js?v=excellus-2027';
 import {providers} from './provider.js?v=excellus-2027';
 import {healthspringMapping} from './healthspring.js?v=excellus-2027';
@@ -22,6 +23,7 @@ async function data() {
 }
 const picker=medicationPicker(data);
 const providerInput=providerPicker();
+registerSearchContext(()=>({loadData:data,medications:picker.getSelections(),providers:providerInput.getSelections(),pending:picker.hasPending()||providerInput.hasPending(),directoryId:document.querySelector('#healthspring-directory').value}));
 function terms(value) {return value.split('\n').map(s=>s.trim()).filter(Boolean);}
 function drugMatches(plan,term,formularies) {
   const hits=[];

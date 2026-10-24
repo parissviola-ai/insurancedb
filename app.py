@@ -4,6 +4,8 @@ import json
 import sqlite3
 import devoted
 import service_data
+import carrier_websites
+import mimetypes
 from datetime import date
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -105,16 +107,27 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         parsed = urlparse(self.path)
-        if parsed.path in ('/api/plans', '/api/devoted', '/api/document'):
+        if parsed.path in ('/api/plans', '/api/devoted', '/api/document', '/api/carrier-websites', '/api/carrier-locations'):
             params = {k:v[0] for k,v in parse_qs(parsed.query).items()}
             try:
-                data = (service_data.document_text(params.get('url','')) if parsed.path == '/api/document' else
+                data = (carrier_websites.locations(params.get('zip', '')) if parsed.path == '/api/carrier-locations' else
+                        carrier_websites.search(params) if parsed.path == '/api/carrier-websites' else
+                        service_data.document_text(params.get('url','')) if parsed.path == '/api/document' else
                         devoted.lookup(params) if parsed.path == '/api/devoted' else search(params))
                 self.respond(json.dumps(data).encode(), 'application/json')
+            except carrier_websites.ShoppingError as error:
+                self.respond(json.dumps({'error':error.message, 'status':error.status}).encode(), 'application/json', 503)
             except ValueError as error:
                 self.respond(json.dumps({'error':str(error)}).encode(), 'application/json', 400)
             except Exception:
-                self.respond(json.dumps({'error':'Devoted lookup unavailable. No coverage inferred; please retry.'}).encode(), 'application/json', 502)
+                self.respond(json.dumps({'error':'Lookup unavailable. No plan availability or coverage inferred; please retry.'}).encode(), 'application/json', 502)
+        elif parsed.path.startswith('/dashboard/'):
+            relative = parsed.path.removeprefix('/dashboard/') or 'index.html'
+            target = (ROOT / 'docs' / relative).resolve()
+            if not target.is_relative_to((ROOT / 'docs').resolve()) or not target.is_file():
+                self.send_error(404)
+                return
+            self.respond(target.read_bytes(), mimetypes.guess_type(target.name)[0] or 'application/octet-stream')
         elif parsed.path in ('/', '/app.js', '/style.css'):
             name = {'/':'index.html','/app.js':'app.js','/style.css':'style.css'}[parsed.path]
             mime = {'/':'text/html','/app.js':'text/javascript','/style.css':'text/css'}[parsed.path]

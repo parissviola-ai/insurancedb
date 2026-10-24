@@ -1,15 +1,15 @@
 {
-  "updated_on": "2026-10-14",
+  "updated_on": "2026-10-24",
   "carriers": [
     {
       "name": "Devoted Health",
       "phase": "Connected",
-      "scope": "2027 Medicare Advantage · 15 target states",
+      "scope": "2027 Medicare Advantage \u00b7 15 target states",
       "availability": "442 plans imported with county availability and prepared ZIP lookup.",
       "benefits": "Official benefit documents imported; unresolved amounts stay unverified.",
-      "medications": "Formulary candidates, captured restrictions and source-listed costs imported. Exact drug coverage requires review.",
-      "providers": "Live provider/facility checks connected. Confirm exact office, dates and participation.",
-      "connection": "Public FHIR directory connected without credentials.",
+      "medications": "Formulary candidates, captured restrictions and source-listed costs imported. Exact drug coverage requires review. Combined public ZIP results reuse these candidates only for exact carrier/segment/state/year matches.",
+      "providers": "Live provider/facility checks connected. Confirm exact office, dates and participation. Combined public ZIP results now reuse the exact imported plan-network mapping with the live directory.",
+      "connection": "Public FHIR directory connected without credentials. Public shopping: fresh public service-area/plan data retrieved per search across configured states, with SSA county mapping kept separate from FIPS. Twelve plans tested for 28202 in 2027. Website search changes are local; no private backend is deployed.",
       "next_step": "Continue validating medication strengths, restrictions and exact office results.",
       "links": [
         {
@@ -21,7 +21,7 @@
     {
       "name": "Wellcare",
       "phase": "Partially connected",
-      "scope": "2027 Medicare Advantage · North Carolina live; 15-state inventory researched",
+      "scope": "2027 Medicare Advantage \u00b7 North Carolina live; 15-state inventory researched",
       "availability": "Seven NC plans imported. Research inventory: 151 state/plan/segment records across 15 states; 124 network candidates and 27 unmatched. CMS release lists only PDP in AL, TN and VA.",
       "benefits": "Seven NC plans: official benefits and coverage documents imported. Other states pending.",
       "medications": "Four NC formularies imported as candidates with preferred retail cost schedules. Patriot Giveback has no included Part D.",
@@ -41,14 +41,14 @@
     },
     {
       "name": "UnitedHealthcare / AARP",
-      "phase": "Paused",
+      "phase": "Partially connected",
       "scope": "Medicare products first; other lines pending",
       "availability": "Official ZIP/county shopping source found; not imported.",
       "benefits": "Uploaded 2027 FL Plan Highlights reviewed for H1045-059-000. Not imported; Summary of Benefits/Evidence of Coverage still needed.",
-      "medications": "Not imported.",
-      "providers": "Not connected.",
-      "connection": "Third-party API listing found; endpoint unavailable from this environment. Linked UHC documentation displayed “Coming soon” to project owner. No working integration verified.",
-      "next_step": "Research paused at project owner’s request while Molina is investigated.",
+      "medications": "Not imported. Automated checks in combined public ZIP results are not yet connected.",
+      "providers": "Not connected. Automated checks in combined public ZIP results are not yet connected.",
+      "connection": "Third-party API listing found; endpoint unavailable from this environment. Linked UHC documentation displayed \u201cComing soon\u201d to project owner. No working integration verified. Public shopping: ZIP/county/year MA and PDP lists tested locally; 16 plans for 28202 in 2027. Medigap quotes are not retrieved. Website search changes are local; no private backend is deployed.",
+      "next_step": "Research paused at project owner\u2019s request while Molina is investigated.",
       "links": [
         {
           "label": "Official Medicare plan website",
@@ -59,12 +59,12 @@
     {
       "name": "Molina",
       "phase": "Research",
-      "scope": "2027 Medicare Advantage · KY, NY, OH, SC, TX researched",
+      "scope": "2027 Medicare Advantage \u00b7 KY, NY, OH, SC, TX researched",
       "availability": "CMS lists 16 state/plan/segment records in these five states, all D-SNP. Includes Passport Advantage and Senior Whole Health branding. Not yet imported into the dashboard.",
       "benefits": "Not imported.",
-      "medications": "Not imported.",
-      "providers": "Not connected.",
-      "connection": "Official developer portal and provider-directory sandbox documentation verified. Sandbox uses mock data and permits unauthenticated tests. Production endpoint and access requirements remain unverified.",
+      "medications": "Not imported. Automated checks in combined public ZIP results are not yet connected.",
+      "providers": "Not connected. Automated checks in combined public ZIP results are not yet connected.",
+      "connection": "Official developer portal and provider-directory sandbox documentation verified. Sandbox uses mock data and permits unauthenticated tests. Production endpoint and access requirements remain unverified. Public shopping: anonymous browser flow tested locally; one plan for 29201 / Richland SC in 2027. Exact county/year checks required. Website search changes are local; no private backend is deployed.",
       "next_step": "Confirm the production provider-directory endpoint and CMS-plan/network mapping, then retrieve 2027 benefits and formularies.",
       "links": [
         {
@@ -80,12 +80,12 @@
     {
       "name": "HealthSpring",
       "phase": "Partially connected",
-      "scope": "Former Cigna Medicare · 2027 documents across 15 target states; one NC plan in comparison",
+      "scope": "Former Cigna Medicare \u00b7 2027 documents across 15 target states; one NC plan in comparison",
       "availability": "146 Medicare Advantage state/plan-segment entries checked against CMS and official PDFs across 12 target states. LA, MI and NY have only standalone PDP entries in the reviewed sources. Plan comparison currently includes True Choice H7849-113-001 in its 11 NC counties.",
       "benefits": "143 unique EOC PDFs collected; searchable library and Excel-compatible plan/segment CSV published. True Choice benefit amounts are imported with conditions; its OTC allowance and annual routine rides remain unverified, not zero. Other plan benefit comparisons are pending. PA H3949-052 website county metadata differs, but its printed EOC and CMS agree.",
-      "medications": "Six 2027 shared formularies collected with 15,304 candidate entries. Explicit PDF applicability links 139 MA state/segments; seven have no included Part D. Assurance/Extra standalone PDP lists remain separate. Medication comparison currently uses the NC True Choice formulary and plan-listed tier costs; exact coverage requires review.",
-      "providers": "All 38 available regional HMO/PPO directories indexed across the 12 MA target states. Dated PDF suggestions include office details and source pages; extraction is partial. Select the correct regional directory. Only the NC True Choice PPO connection is verified for comparison; other directory-to-plan links and all live network coverage remain unverified. EyeMed locator is linked in results and Excel.",
-      "connection": "Public FHIR on port 8003 works without authentication for tested requests. Last inspected catalog contained 618 plans dated 2025/2026; no 2027 mapping found. The connector checks exact plan/segment and full-year dates and rejects historical mappings. PDF suggestions work independently of the live API.",
+      "medications": "Six 2027 shared formularies collected with 15,304 candidate entries. Explicit PDF applicability links 139 MA state/segments; seven have no included Part D. Assurance/Extra standalone PDP lists remain separate. Medication comparison currently uses the NC True Choice formulary and plan-listed tier costs; exact coverage requires review. Combined public ZIP results now reuse exact matched formularies; unmatched segments remain unverified.",
+      "providers": "All 38 available regional HMO/PPO directories indexed across the 12 MA target states. Dated PDF suggestions include office details and source pages; extraction is partial. Select the correct regional directory. Only the NC True Choice PPO connection is verified for comparison; other directory-to-plan links and all live network coverage remain unverified. EyeMed locator is linked in results and Excel. Combined public ZIP results reuse dated PDF candidates only where full plan applicability is confirmed.",
+      "connection": "Public FHIR on port 8003 works without authentication for tested requests. Last inspected catalog contained 618 plans dated 2025/2026; no 2027 mapping found. The connector checks exact plan/segment and full-year dates and rejects historical mappings. PDF suggestions work independently of the live API. Public shopping: anonymous ZIP/FIPS/year plan retrieval tested locally; seven plans for 28202 in 2027. Website search changes are local; no private backend is deployed.",
       "next_step": "Import benefit schedules for additional plan/segments, verify their exact directory connections, and recheck the API for 2027 network records. Confirm True Choice OTC/routine-transportation benefit amounts before using them in ranking.",
       "links": [
         {
@@ -157,30 +157,34 @@
     {
       "name": "Aetna",
       "phase": "Research",
-      "scope": "Medicare API access request submitted · awaiting Aetna review",
-      "availability": "No Aetna plan inventory imported. Exact 2027 CMS plan/segment availability remains unverified.",
+      "scope": "Public Medicare shopping local pilot \u00b7 production API review separate",
+      "availability": "Nine public 2027 plans retrieved for test ZIP 28202 / Mecklenburg. No Aetna inventory imported into the static comparison dataset.",
       "benefits": "Not imported.",
-      "medications": "Not imported. Formulary API availability and access remain unverified.",
-      "providers": "Not connected. Aetna catalog lists Commercial and Medicare directory resources under /v1/providerdirectorydata/.",
-      "connection": "Production API access ticket submitted by the project owner. Aetna will review in 2–4 days, per the owner’s update. Submitted October 14, 2026. Access has not been approved or tested. The provided /v1/providerdirectory/ example is a 2020 Medicaid record; it does not verify 2027 Medicare coverage.",
-      "next_step": "Await Aetna’s review (estimated 2–4 days; calendar/business days not specified). After approval, confirm production authentication, retrieve a 2027 Medicare InsurancePlan, and verify its CMS plan/segment-to-network references before connecting provider searches.",
+      "medications": "Not imported. Formulary API availability and access remain unverified. Automated checks in combined public ZIP results are not yet connected.",
+      "providers": "Not connected. Aetna catalog lists Commercial and Medicare directory resources under /v1/providerdirectorydata/. Automated checks in combined public ZIP results are not yet connected.",
+      "connection": "Production API access ticket submitted by the project owner. Aetna will review in 2\u20134 days, per the owner\u2019s update. Submitted October 14, 2026. Access has not been approved or tested. The provided /v1/providerdirectory/ example is a 2020 Medicaid record; it does not verify 2027 Medicare coverage. Public shopping: anonymous ZIP/county/year plan retrieval tested locally; nine plans for 28202 / Mecklenburg in 2027. No portal credentials used. Website search changes are local; no private backend is deployed.",
+      "next_step": "Deploy an access-controlled private backend and validate additional configured-state ZIPs. Provider/medication website searches remain deferred; API approval remains separate.",
       "links": [
         {
           "label": "Aetna Developer Portal",
           "url": "https://developerportal.aetna.com/"
+        },
+        {
+          "label": "Public Medicare shopping",
+          "url": "https://www.aetna.com/medicare/compare-plans-enroll.html"
         }
       ]
     },
     {
       "name": "CareFirst",
       "phase": "Research",
-      "scope": "Private single-user directory integration proposed · request submitted; response pending",
+      "scope": "Private single-user directory integration proposed \u00b7 request submitted; response pending",
       "availability": "No plan inventory imported. The supplied specification has no InsurancePlan operation.",
       "benefits": "Not imported.",
       "medications": "Not imported.",
       "providers": "Not connected. Proposed design: sign-in required, live provider/facility searches through a private backend, and no persistent directory-response storage. Architecture is proposed, not implemented.",
-      "connection": "CareFirst confirmed receipt of the request on October 14, 2026 and will respond by email; no turnaround estimate was provided. Support: DeveloperPortalSupport@carefirst.com. Usage approval and subscription access remain unconfirmed. The documented API requires x-api-subscription-key; Medicare/2027 scope and exact CMS plan-to-network mapping remain unverified. No CareFirst records are included in public datasets or exports.",
-      "next_step": "Await CareFirst’s email response about the private single-user use case, data-display/storage/export permissions, production subscription, Medicare/2027 data and CMS network mapping. Use the saved correlation ID for follow-up. After confirmation, implement the private backend and sign-in; the current architecture remains a proposal.",
+      "connection": "CareFirst confirmed receipt of the request on October 14, 2026 and will respond by email; no turnaround estimate was provided. Support: DeveloperPortalSupport@carefirst.com. Usage approval and subscription access remain unconfirmed. The documented API requires x-api-subscription-key; Medicare/2027 scope and exact CMS plan-to-network mapping remain unverified. No CareFirst records are included in public datasets or exports. Public shopping: the Medicare entry currently returns a missing-page result. Dashboard reports unavailable, without inferring plan absence. Website search changes are local; no private backend is deployed.",
+      "next_step": "Await CareFirst\u2019s email response about the private single-user use case, data-display/storage/export permissions, production subscription, Medicare/2027 data and CMS network mapping. Use the saved correlation ID for follow-up. After confirmation, implement the private backend and sign-in; the current architecture remains a proposal.",
       "links": [
         {
           "label": "CareFirst Provider Directory API documentation",
@@ -204,7 +208,7 @@
       "benefits": "Not imported.",
       "medications": "Not imported.",
       "providers": "Public directory responds; not integrated into the dashboard.",
-      "connection": "Official Cigna Provider Directory documentation says no authorization required. Production metadata and sample InsurancePlan requests succeeded; inspected records were commercial products, not verified 2027 Medicare plans.",
+      "connection": "Official Cigna Provider Directory documentation says no authorization required. Production metadata and sample InsurancePlan requests succeeded; inspected records were commercial products, not verified 2027 Medicare plans. Public shopping: former Cigna Medicare results are included under HealthSpring without duplication. Separate Cigna commercial shopping is not connected. Website search changes are local; no private backend is deployed.",
       "next_step": "Continue Medicare setup under HealthSpring. Revisit Cigna separately only if commercial products are added to scope.",
       "links": [
         {
@@ -216,12 +220,12 @@
     {
       "name": "Excellus BlueCross BlueShield",
       "phase": "Partially connected",
-      "scope": "2027 NY individual MA · plans 028, 029 and 030 · document-based comparison",
+      "scope": "2027 NY individual MA \u00b7 plans 028, 029 and 030 \u00b7 document-based comparison",
       "availability": "Three exact CMS plan/segments H3351-028-000, H3351-029-000 and H3351-030-000 imported for their 13 NY counties. CMS county availability and premiums verified against official 2027 documents. Missing ZIP mapping requires manual NY/county confirmation.",
       "benefits": "Official 2027 Summaries of Benefits and EOCs linked. Premium, medical maximum, specialist, modeled hospital, eyewear, Advanced hearing and transportation metrics imported. Routine transportation is explicitly not covered. Comprehensive dental is an optional $35/month add-on; no base dental dollar allowance or OTC allowance assumed.",
-      "medications": "2,435 extracted 2027 formulary candidates searchable by name, with tiers, captured restrictions and PDF pages. Preferred network retail 30-day initial-coverage tier costs included with deductible/pharmacy conditions. Suggestions are not confirmation of exact strength/form or coverage.",
-      "providers": "13,785 dated PDF office candidates indexed, including 469 facility listings. Name suggestions and exact selected office/source appear in comparison and Excel. Extraction is partial; NPIs are not supplied by this PDF index. Confirm current participation. No live 2027 network checks.",
-      "connection": "Official guidance states public access APIs require neither app registration nor end-user authentication/consent; Patient Access is separate. Base https://fhir.excellusbcbs.com/fhir/api tested successfully for metadata, provider search, roles, InsurancePlan read and network Organization read. A name=Medicare plan search returned 100 sampled records; none in that page had coverage periods or root CMS identifiers. A supplied-format CMS identifier search was rejected; this does not establish absence from the entire catalog. The project owner submitted the CMS-to-internal-plan/network mapping question to Excellus support; response pending. No response timeframe has been provided.",
+      "medications": "2,435 extracted 2027 formulary candidates searchable by name, with tiers, captured restrictions and PDF pages. Preferred network retail 30-day initial-coverage tier costs included with deductible/pharmacy conditions. Suggestions are not confirmation of exact strength/form or coverage. Combined public ZIP results now reuse exact matched formularies; unmatched segments remain unverified.",
+      "providers": "13,785 dated PDF office candidates indexed, including 469 facility listings. Name suggestions and exact selected office/source appear in comparison and Excel. Extraction is partial; NPIs are not supplied by this PDF index. Confirm current participation. No live 2027 network checks. Combined public ZIP results reuse dated PDF candidates only where full plan applicability is confirmed.",
+      "connection": "Official guidance states public access APIs require neither app registration nor end-user authentication/consent; Patient Access is separate. Base https://fhir.excellusbcbs.com/fhir/api tested successfully for metadata, provider search, roles, InsurancePlan read and network Organization read. A name=Medicare plan search returned 100 sampled records; none in that page had coverage periods or root CMS identifiers. A supplied-format CMS identifier search was rejected; this does not establish absence from the entire catalog. The project owner submitted the CMS-to-internal-plan/network mapping question to Excellus support; response pending. No response timeframe has been provided. Public shopping: anonymous browser flow tested locally; four MA plans for 14604 / Monroe NY in 2027. Supplemental/dental products are not retrieved. Website search changes are local; no private backend is deployed.",
       "next_step": "Await support response on exact 2027 individual CMS-to-InsurancePlan/network mapping and group-plan distinction. Review PDF extraction and complete missing ZIP/county mappings. Live network integration remains pending.",
       "links": [
         {
@@ -262,7 +266,7 @@
       "benefits": "Not imported.",
       "medications": "Not imported.",
       "providers": "Not connected.",
-      "connection": "Not investigated.",
+      "connection": "Not investigated. Public shopping: Wellabe public ZIP selection implemented; reviewed supplement flow directs users to an agent. No ZIP/year plan list or premium verified. Website search changes are local; no private backend is deployed.",
       "next_step": "Confirm product/state scope and official data sources before importing.",
       "links": []
     },
@@ -274,19 +278,19 @@
       "benefits": "Not imported.",
       "medications": "Not imported.",
       "providers": "Not connected.",
-      "connection": "Not investigated.",
+      "connection": "Not investigated. Public shopping: official supplement product page checked; no ZIP/year shopping response verified. Agent quote follow-up required. Website search changes are local; no private backend is deployed.",
       "next_step": "Confirm product/state scope and official data sources before importing.",
       "links": []
     },
     {
       "name": "Highmark Wholecare",
       "phase": "Research",
-      "scope": "2027 PA plans verified · Diamond/Ruby product-level API network located",
+      "scope": "2027 PA plans verified \u00b7 Diamond/Ruby product-level API network located",
       "availability": "CMS 2027 confirms four PA D-SNP plan/segments: Diamond H5932-001-000 and Ruby H5932-009-000 each serve 57 counties; Diamond H5932-012-000 and Ruby H5932-013-000 each serve Bucks, Chester, Delaware, Montgomery and Philadelphia. Separate PBP IDs, not interchangeable segment IDs. Not yet imported into comparison.",
       "benefits": "Official 2027 Summaries of Benefits downloaded for all four plans. Combined maximum yearly dental allowance: Diamond 001/012 $3,000; Ruby 009/013 $2,000, subject to source conditions including prior authorization. Older-year third-party ranges are not used. Benefits not yet imported.",
-      "medications": "Not imported.",
-      "providers": "Product-level plan-to-network references verified for Diamond and Ruby in HMPAMS. A PractitionerRole query filtered to the referenced Medicare network returned active roles linking practitioners and specific offices. InsurancePlan records omit effective periods and CMS plan/segment IDs; exact applicability to the four 2027 CMS plans still requires confirmation. OrganizationAffiliation network search returned no records; facility links need further review. Not connected to dashboard searches.",
-      "connection": "Authenticated HMHS access works. Enumerating the complete five-record HMPAMS InsurancePlan list located Medicare Assured Diamond(SM) and Medicare Assured Ruby(SM), administered by the API payer named Gateway Health. Both reference Organization/3f77ba7d-d1c9-440f-ad41-63001aab67d3, a Medicare network identified as PT001. Prior filtered name searches missed records that enumeration returned. The portal partition label alone did not identify the correct product placement.",
+      "medications": "Not imported. Automated checks in combined public ZIP results are not yet connected.",
+      "providers": "Product-level plan-to-network references verified for Diamond and Ruby in HMPAMS. A PractitionerRole query filtered to the referenced Medicare network returned active roles linking practitioners and specific offices. InsurancePlan records omit effective periods and CMS plan/segment IDs; exact applicability to the four 2027 CMS plans still requires confirmation. OrganizationAffiliation network search returned no records; facility links need further review. Not connected to dashboard searches. Automated checks in combined public ZIP results are not yet connected.",
+      "connection": "Authenticated HMHS access works. Enumerating the complete five-record HMPAMS InsurancePlan list located Medicare Assured Diamond(SM) and Medicare Assured Ruby(SM), administered by the API payer named Gateway Health. Both reference Organization/3f77ba7d-d1c9-440f-ad41-63001aab67d3, a Medicare network identified as PT001. Prior filtered name searches missed records that enumeration returned. The portal partition label alone did not identify the correct product placement. Public shopping: separated from regular Highmark results by carrier/contract identity; H5932-001-000 and H5932-009-000 returned for 15222 / Allegheny PA in 2027. Website search changes are local; no private backend is deployed.",
       "next_step": "Confirm that the unversioned Diamond/Ruby Medicare network PT001 applies to 2027 H5932-001/012 and H5932-009/013, using official directory applicability or API guidance. Continue facility linkage checks, then implement a private backend for authenticated searches. Do not expose the API key in static HTML or GitHub.",
       "links": [
         {
@@ -308,6 +312,23 @@
         {
           "label": "Official 2027 Summary of Benefits H5932-013-000",
           "url": "https://producer.highmark.com/content/dam/highmark/en/healthco/shopx/dsnp/2027-resources/pa/SB_H5932013000_2027_English.pdf"
+        }
+      ]
+    },
+    {
+      "name": "Highmark",
+      "phase": "Partially connected",
+      "scope": "Public 2027 Medicare shopping \u00b7 local backend pilot",
+      "availability": "14 Highmark MA plans retrieved for test ZIP 15222 / Allegheny PA. Separate Wholecare results retained under Wholecare.",
+      "benefits": "Only public shopping plan premiums retrieved; detailed benefit comparisons not imported.",
+      "medications": "Website searches deferred. Automated checks in combined public ZIP results are not yet connected.",
+      "providers": "Website searches deferred. Automated checks in combined public ZIP results are not yet connected.",
+      "connection": "Anonymous public browser shopping tested. Exact ZIP/FIPS/year and complete-response checks required. No private backend deployed.",
+      "next_step": "Deploy the private backend and validate additional configured-state ZIPs.",
+      "links": [
+        {
+          "label": "Official public shopping",
+          "url": "https://medicare.highmark.com/view-plans"
         }
       ]
     }
