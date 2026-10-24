@@ -59,6 +59,46 @@ class PlanDocumentTests(unittest.TestCase):
         metrics,_,_=docs.parse_benefits(text,'https://example.com/eoc.pdf')
         self.assertEqual(metrics['moop']['amount'],4450)
 
+    def test_aetna_service_allowance_and_quarterly_wallet_layouts(self):
+        text=('Summary\fDental services\nBenefit Your in-network costs Your out-of-network costs\n'
+              'Dental services $0 copay for covered services 50% coinsurance\n'
+              'You get an annual benefit amount (allowance) of $2,000 for covered\n'
+              'services. You are responsible for costs over this amount.\n'
+              'Vision services annual benefit amount (allowance) of $100 for eyewear.\n'
+              'CVS Over-the-Counter You get a $50 quarterly benefit amount (allowance) on the Aetna\n'
+              '(OTC) Wallet Medicare Extra Benefits Card.')
+        metrics,_,_=docs.parse_benefits(text,'https://example.com/sb.pdf')
+        self.assertEqual(metrics['dental']['amount'],2000)
+        self.assertEqual(metrics['otc']['amount'],50)
+        self.assertEqual(metrics['otc']['period'],'quarter')
+        self.assertTrue(metrics['dental']['source_url'].endswith('#page=2'))
+        text='CVS Over-the-Counter (OTC) Wallet with a $25 quarterly benefit amount (allowance).'
+        self.assertEqual(docs.parse_benefits(text,'https://example.com/eoc.pdf')[0]['otc']['amount'],25)
+        text='Over-the-counter (OTC) creditQuarterly credit is $50 Not Covered'
+        self.assertEqual(docs.parse_benefits(text,'https://example.com/eoc.pdf')[0]['otc']['amount'],50)
+
+    def test_optional_dental_is_not_an_included_allowance(self):
+        text=('Dental services $0 copay for preventive services.\n'
+              'This plan does not include comprehensive services. You can purchase coverage for an additional premium.\n'
+              'Optional Supplemental Benefits\nDental services You get an annual benefit amount (allowance) of $1,500 for covered services.')
+        metrics,notes,unavailable=docs.parse_benefits(text,'https://example.com/sb.pdf')
+        self.assertNotIn('dental',metrics)
+        self.assertIn('costs extra',unavailable['dental'])
+        text='Dental services through the Platinum Dental Rider. Optional supplemental benefits Platinum Dental Rider premium Additional $54 per month'
+        metrics,_,unavailable=docs.parse_benefits(text,'https://example.com/sb.pdf')
+        self.assertNotIn('dental',metrics)
+        self.assertIn('Optional paid',unavailable['dental'])
+
+    def test_conditional_or_combined_wallet_does_not_rank_as_otc_only(self):
+        for condition in ['For qualifying members only.','This wallet also covers food and utilities.']:
+            text='OTC credit $100 credit every quarter. '+condition
+            metrics,notes,unavailable=docs.parse_benefits(text,'https://example.com/sb.pdf')
+            self.assertNotIn('otc',metrics)
+            self.assertIn('$100 / quarter',unavailable['otc'])
+            self.assertIn('eligibility',notes['otc'])
+        text='CVS Over-the-Counter (OTC) Wallet with a $25 monthly benefit amount (allowance).'
+        self.assertNotIn('otc',docs.parse_benefits(text,'https://example.com/sb.pdf')[0])
+
     def test_formulary_rows_keep_wraps_and_page_numbers(self):
         text=('C1  Fixture drug (Oral Suspension     G   2   QL\n   Reconstituted)\n\f'
               'C1  Another fixture (Oral Tablet)     B   4   PA\n')
@@ -79,6 +119,23 @@ class PlanDocumentTests(unittest.TestCase):
             with self.assertRaises(ValueError):docs.lookup(valid)
             with self.assertRaises(ValueError):docs.lookup({**valid,'county':'37119'})
             catalog.assert_not_called()
+
+    def test_evidence_otc_fallback_and_conflicts(self):
+        params={'carrier':PLAN['carrier'],'plan_id':PLAN['official_id'],'zip':'28613','county':'37035','year':'2027'}
+        catalog=[{'kind':'benefits','label':'SB','url':'https://www.aarpmedicareplans.com/alphadog/sb'},
+                 {'kind':'evidence','label':'EOC','url':'https://www.aarpmedicareplans.com/alphadog/eoc'}]
+        cover='Summary 2027 H1234-001-000 AARP Medicare Advantage from UHC NC-15 (HMO-POS)\n'
+        geo={'counties':[{'code':'37035','name':'Catawba','state':'NC'}]}
+        metadata={'retrieved_at':'2026-10-24','sha256':'fixture','pages':1}
+        with patch.object(docs.carriers,'locations',return_value=geo),patch.object(docs.carriers,'uhc_plans',return_value=[PLAN]),patch.object(docs,'document_catalog',side_effect=lambda *a:[dict(d) for d in catalog]):
+            with patch.object(docs,'read_pdf',side_effect=[(cover,metadata),(cover+'Over-the-counter (OTC) creditQuarterly credit is $50',metadata)]):
+                result=docs.lookup(params)
+                self.assertEqual(result['benefit_metrics']['otc']['amount'],50)
+                self.assertIn('/eoc#page=1',result['benefit_metrics']['otc']['source_url'])
+            with patch.object(docs,'read_pdf',side_effect=[(cover+'OTC credit $25 credit every quarter',metadata),(cover+'Over-the-counter (OTC) creditQuarterly credit is $50',metadata)]):
+                result=docs.lookup(params)
+                self.assertNotIn('otc',result['benefit_metrics'])
+                self.assertIn('Conflicting',result['benefit_unavailable']['otc'])
 
     def test_conflicting_pdf_amounts_withheld_and_mismatched_cover_stops_companions(self):
         params={'carrier':PLAN['carrier'],'plan_id':PLAN['official_id'],'zip':'28613','county':'37035','year':'2027'}

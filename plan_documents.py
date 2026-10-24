@@ -157,27 +157,62 @@ def parse_benefits(text,url):
             if (columns or network_only) and re.search(r'each\s+year',after,re.I):
                 moop=match;break
     add('moop',moop,'year','In-network annual medical maximum. Part D, premiums and excluded services are separate; confirm source conditions.')
-    add('dental',re.search(r'Annual dental maximum:\s*\$'+amount,text,re.I),
-        'year','Annual dental maximum/allowance. Comprehensive services may require coinsurance; network, exclusions and frequency rules apply.')
-    # Aetna annual allowances need benefit-specific context, not the first allowance in the PDF.
-    for key,anchor,noun in [('dental','Dental services','comprehensive'),('vision','Vision services','eyewear')]:
-        start=text.find(anchor)
-        if start>=0:
-            segment=text[start:start+2300]
-            found=re.search(r'annual benefit amount\s*\(allowance\)\s*of\s*\$'+amount+r'[\s\S]{0,160}?'+noun,segment,re.I)
-            if found:
-                full=re.search(re.escape(found.group(0)),text)
-                add(key,full,'year',('Covered comprehensive dental services; preventive/comprehensive cost shares and benefit limits apply.' if key=='dental' else 'Annual prescription eyewear allowance; designated network/vendor and reimbursement rules apply.'),float(found.group(1).replace(',','')))
+    dental_note='Annual dental maximum/allowance. Network, covered-service and frequency limits apply.'
+    dental=re.search(r'Annual dental maximum:\s*\$'+amount,text,re.I)
+    if dental:
+        before=text[max(0,dental.start()-1600):dental.start()]
+        # Optional paid riders are not part of the base plan benefit.
+        if 'included with your plan' in before.lower() or not re.search(r'(?:optional|platinum dental rider)',before,re.I):
+            add('dental',dental,'year',dental_note)
+    # Read benefit-specific allowance sentences in every section occurrence;
+    # an EOC's first heading may be a table of contents entry.
+    for heading in re.finditer(r'(?:Dental|Vision) services',text,re.I):
+        key='dental' if heading.group().lower().startswith('dental') else 'vision'
+        segment=text[heading.end():heading.end()+3500]
+        boundary=re.search(r'\n(?:Vision services|Hearing services|Hearing aids|Dental services|Additional benefits|Fitness|Over-the-Counter)',segment,re.I)
+        if boundary:segment=segment[:boundary.start()]
+        if key=='dental' and re.search(r'This plan does not include comprehensive services',segment,re.I):
+            metrics.pop('dental',None)
+            unavailable['dental']='Preventive dental only; comprehensive coverage costs extra'
+            notes['dental']='Preventive services are included. Comprehensive dental requires an optional paid benefit; its allowance is excluded from base-plan ranking.'
+            continue
+        if key=='dental' and 'dental' in unavailable:continue
+        if key=='dental':
+            pattern=r'annual benefit amount\s*\(allowance\)\s*of\s*\$'+amount+r'\s+for covered\s+(?:(?:preventive|comprehensive)\s+)?(?:dental\s+)?services'
+        else:
+            pattern=r'annual benefit amount\s*\(allowance\)\s*of\s*\$'+amount+r'[^$]{0,160}?eyewear'
+        found=re.search(pattern,segment,re.I)
+        if not found:continue
+        full=re.compile(pattern,re.I).search(text,heading.end(),heading.end()+len(segment))
+        description=('Annual dental allowance for covered services; preventive/comprehensive cost shares and limits apply.' if key=='dental' else 'Annual prescription eyewear allowance; designated network/vendor and reimbursement rules apply.')
+        if key=='dental' and re.search(r'preventive[^.]{0,140}do not count toward',segment,re.I):
+            description+=' Preventive services do not count toward this allowance.'
+        add(key,full,'year',description,float(found.group(1).replace(',','')))
     if 'dental' in metrics:
-        start=text.find('Annual dental maximum:')
-        if start<0:start=text.find('Dental services')
-        context=text[start:start+2200] if start>=0 else ''
+        # Only dental context supplies coinsurance notes, not nearby hearing/vision rows.
+        pos=text.find('Annual dental maximum:')
+        if pos<0:pos=text.lower().find('dental services')
+        context=text[pos:pos+2500] if pos>=0 else ''
         shares=list(dict.fromkeys(re.findall(r'\b[0-9]+%(?:\s*-\s*[0-9]+%)?(?=\s+coinsurance)',context)))
         if shares:metrics['dental']['notes']+=' Dental source lists '+', '.join(shares)+' coinsurance; check which services it applies to.'
-    # A generic annual allowance must not become a dental amount merely because it occurs first.
-    if 'dental' in metrics and 'Annual dental maximum:' not in text and 'Dental services' not in text:metrics.pop('dental',None)
-    add('otc',re.search(r'(?:OTC credit|Over-the-counter)[^$]{0,100}\$'+amount+r'\s+credit\s+(?:every|per)\s+quarter',text,re.I),
-        'quarter','Eligible OTC products only. Quarterly allowance; annual equivalent assumes four quarters, without rollover.')
+    elif 'dental' not in unavailable and re.search(r'Platinum Dental Rider[\s\S]{0,350}Additional\s+\$'+amount+r'\s+per month',text,re.I):
+        unavailable['dental']='Optional paid dental rider — base annual amount not verified'
+        notes['dental']='Dental rider benefits require an additional premium; not counted as a base-plan allowance.'
+    otc_patterns=[
+        r'(?:OTC credit|Over-the-counter)[^$]{0,100}\$'+amount+r'\s+credit\s+(?:every|per)\s+quarter',
+        r'Over-the-counter\s*\(OTC\)\s*credit\s*Quarterly credit is\s*\$'+amount,
+        r'CVS Over-the-Counter[^$]{0,180}\$'+amount+r'\s+quarterly benefit amount',
+    ]
+    for pattern in otc_patterns:
+        match=re.search(pattern,text,re.I)
+        if not match:continue
+        context=text[match.start():match.end()+900]
+        if re.search(r'(?:SSBCI|chronically ill|qualifying chronic|qualifying members|food|utilities|utility)',context,re.I):
+            unavailable['otc']='$'+match.group(1)+' / quarter — shared or conditional wallet; review eligibility'
+            notes['otc']='Not counted as an unrestricted OTC-only allowance. Review the combined wallet and eligibility rules.'
+        else:
+            add('otc',match,'quarter','Eligible OTC products at participating retailers only. Quarterly allowance; four-quarter annual equivalent assumes no rollover. Carrier purchase and card rules apply.')
+        break
     add('specialist',re.search(r'Specialists?(?:[\d,]+)?\s+\$'+amount+r'\s+copay',text,re.I),'visit','In-network specialist visit copay; separate services and authorization rules may apply.')
     eyewear=re.search(r'Routine eyewear\s+\$'+amount+r'\s+allowance every\s+(\d+)(?:\s+No coverage)?\s+years',text,re.I)
     if eyewear:
@@ -260,9 +295,9 @@ def lookup(params):
                 else:
                     metrics,notes,unavailable=parse_benefits(text,doc['url'])
                     if kind=='evidence':
-                        metrics={k:v for k,v in metrics.items() if k in ('dental','moop')}
-                        notes={k:v for k,v in notes.items() if k in ('dental','moop')}
-                        unavailable={k:v for k,v in unavailable.items() if k in ('dental','moop')}
+                        metrics={k:v for k,v in metrics.items() if k in ('dental','moop','otc')}
+                        notes={k:v for k,v in notes.items() if k in ('dental','moop','otc')}
+                        unavailable={k:v for k,v in unavailable.items() if k in ('dental','moop','otc')}
                     for key in list(metrics):
                         previous=result['benefit_metrics'].get(key)
                         if previous and previous['amount']!=metrics[key]['amount']:

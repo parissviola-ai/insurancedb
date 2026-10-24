@@ -447,3 +447,14 @@ and requires no paid service. The source PDF test runs used pypdf 6.21.2. Valida
 includes unit tests for plan/year/location binding, PDF URL restrictions, benefit
 periods, conflict rejection, wrapped formulary rows, and isolated launcher setup,
 plus a browser test of document pulls and comparison/medication updates.
+
+Dental and OTC document parsing recognizes Aetna covered-services annual dental
+allowances, CVS quarterly OTC Wallet wording, and UHC EOC quarterly credit rows.
+Evidence of Coverage can fill or cross-check OTC as well as dental and medical
+maximums; conflicting amounts are withheld. Preventive-only dental coverage and
+optional paid dental riders are labeled separately from included annual allowances.
+Shared or conditional OTC wallet amounts are disclosed without ranking them as
+unrestricted OTC-only credits. Missing OTC amounts are never inferred as zero.
+Validation used the 20 nonspecial-needs Aetna/UHC Medicare Advantage plans returned
+for 2027 in ZIPs 28262 (Mecklenburg) and 10701 (Westchester), with plan-bound
+Summary of Benefits and Evidence of Coverage documents cached privately.
