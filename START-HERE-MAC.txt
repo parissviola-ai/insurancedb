@@ -50,3 +50,6 @@ and Excel export. Shared files are cached in .local-cache/plan-documents.
 Refresh official PDFs checks for a fresh copy; otherwise cached files are reused
 for up to 24 hours. Source dates remain visible. A pharmacy quote and current
 provider participation are not established by reading these PDFs.
+
+Search all automatically fills Aetna / UHC benefits from official plan PDFs.
+Allow extra time while the progress message shows plans being checked.

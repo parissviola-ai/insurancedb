@@ -121,7 +121,7 @@ export function websiteComparison(container,data,plans,context,form,options={}){
   const productLabel=node('label','Compare product type');const productFilter=node('select');productFilter.setAttribute('aria-label','Compare product type');productFilter.append(new Option('All returned products',''));
   for(const type of [...new Set(plans.map(p=>p.business))].sort())productFilter.append(new Option(type,type));productLabel.append(productFilter);controls.append(carrierLabel,productLabel);
   const comparison=node('section');const detailList=node('section');container.append(controls,comparison,detailList);
-  let destroyed=false;let bulkRunning=false;const loading=new Set();const failures=new Map();
+  let destroyed=false;let bulkRunning=false;let documentProgress=null;const loading=new Set();const failures=new Map();
   let observer;let ranked=[];let weights={};let coverageCells=new Map();let detailCells=new Map();const openDetails=new Set();
   function paintCoverage(p){const checks=state.coverage.get(p.id),cells=coverageCells.get(p.id),details=detailCells.get(p.id);
     if(cells){cells.drugs.textContent=summary(checks?.medications,context.medications.length);cells.people.textContent=summary(checks?.providers,context.providers.length);}
@@ -132,6 +132,14 @@ export function websiteComparison(container,data,plans,context,form,options={}){
     loading.add(p.id);failures.delete(p.id);render();
     try{await options.loadDocuments(p,refresh);}catch(error){if(!destroyed)failures.set(p.id,error.message || 'PDF pull unavailable.');}
     finally{loading.delete(p.id);if(!destroyed)render();}
+  }
+  async function loadPlanDocuments(targets){
+    if(destroyed||bulkRunning||!options.loadDocuments)return;
+    const queue=targets.filter(p=>['Aetna','UnitedHealthcare / AARP'].includes(p.carrier));
+    if(!queue.length)return;
+    bulkRunning=true;documentProgress={done:0,total:queue.length};render();
+    const worker=async()=>{while(queue.length&&!destroyed){const p=queue.shift();await pull(p);documentProgress.done++;if(!destroyed)render();}};
+    try{await Promise.all([worker(),worker()]);}finally{bulkRunning=false;if(!destroyed)render();}
   }
   function render(){
     if(destroyed)return;
@@ -164,12 +172,13 @@ export function websiteComparison(container,data,plans,context,form,options={}){
     table.append(body);wrap.append(table);const scroll=node('div',undefined,'comparison-top-scroll');scroll.tabIndex=0;scroll.setAttribute('role','region');scroll.setAttribute('aria-label','Scroll carrier comparison horizontally');const track=node('div');scroll.append(track);
     scroll.addEventListener('scroll',()=>{wrap.scrollLeft=scroll.scrollLeft;});wrap.addEventListener('scroll',()=>{scroll.scrollLeft=wrap.scrollLeft;});const size=()=>{track.style.width=table.scrollWidth+'px';};observer=new ResizeObserver(size);observer.observe(table);requestAnimationFrame(size);
     const docTargets=ranked.map(r=>r.plan).filter(p=>['Aetna','UnitedHealthcare / AARP'].includes(p.carrier));
-    if(docTargets.length&&options.loadDocuments){const bulk=node('button',bulkRunning?'Reading plan documents…':'Pull official PDFs for displayed Aetna / UHC plans');bulk.type='button';bulk.disabled=bulkRunning;bulk.addEventListener('click',async()=>{bulkRunning=true;render();const queue=[...docTargets];const worker=async()=>{while(queue.length&&!destroyed){const p=queue.shift();await pull(p);}};try{await Promise.all([worker(),worker()]);}finally{bulkRunning=false;render();}});comparison.append(bulk,node('p','Reads summaries, coverage documents and formularies. Shared PDFs are reused from the local cache. Large provider directories stay linked for review.','metadata'));}
+    if(docTargets.length&&options.loadDocuments){const bulk=node('button',bulkRunning?'Reading plan documents…':'Pull official PDFs for displayed Aetna / UHC plans');bulk.type='button';bulk.disabled=bulkRunning;bulk.addEventListener('click',()=>loadPlanDocuments(docTargets));comparison.append(bulk,node('p','Reads summaries, coverage documents and formularies. Shared PDFs are reused from the local cache. Large provider directories stay linked for review.','metadata'));}
+    if(documentProgress){const progress=node('p',bulkRunning?`Filling Aetna / UHC benefits automatically: ${documentProgress.done} of ${documentProgress.total} plans checked. Amounts appear as documents are read.`:`Automatic benefit checks complete: ${documentProgress.done} of ${documentProgress.total} plans checked.`, 'metadata');progress.setAttribute('role','status');comparison.append(progress);if(failures.size)comparison.append(node('p',`${failures.size} plan document checks could not finish. Open plan details to review or retry.`));}
     comparison.append(node('p','Scroll across to compare benefits.','comparison-scroll-hint'),scroll,wrap);
     const download=node('button','Export comparison to Excel');download.type='button';download.disabled=!ranked.length;
     download.addEventListener('click',()=>{const blob=workbook(exportSheets(state,ranked,weights));const url=URL.createObjectURL(blob);const a=node('a');a.href=url;a.download=`carrier-comparison-${data.location?.year || ''}-${data.location?.zip || ''}.xlsx`;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);});comparison.append(download,node('p','Export includes the displayed plans, priorities, benefit sources, medication/provider checks and every carrier status. Add candidate names and reviewer notes offline.','metadata'));
   }
   carrierFilter.addEventListener('change',()=>{state.filters.carrier=carrierFilter.value;render();});productFilter.addEventListener('change',()=>{state.filters.business=productFilter.value;render();});
   const targets=[...priorityKeys.map(k=>form.elements['weight_'+k]),form.elements.special_needs];for(const target of targets)target.addEventListener('change',render);
-  render();return {updateCoverage(id,checks){state.coverage.set(id,checks);const p=plans.find(p=>p.id===id);if(p)paintCoverage(p);},updateDocuments(id,result){const index=plans.findIndex(p=>p.id===id);const live=data.plans.find(p=>p.id===id);if(index<0||!live||result.carrier!==live.carrier||result.official_id!==live.official_id||result.year!==live.year||result.state!==live.state||result.zip!==data.location.zip||result.county!==data.location.county)throw new Error('PDF response did not match this plan and location.');live.document_data=result;live.review_sources={...live.review_sources,...result.review_sources};Object.assign(plans[index],comparisonPlans([live],options.inventory || {plans:[]})[0]);render();},destroy(){destroyed=true;observer?.disconnect();for(const target of targets)target.removeEventListener('change',render);}};
+  render();return {loadDocumentsAutomatically:()=>loadPlanDocuments(plans),updateCoverage(id,checks){state.coverage.set(id,checks);const p=plans.find(p=>p.id===id);if(p)paintCoverage(p);},updateDocuments(id,result){const index=plans.findIndex(p=>p.id===id);const live=data.plans.find(p=>p.id===id);if(index<0||!live||result.carrier!==live.carrier||result.official_id!==live.official_id||result.year!==live.year||result.state!==live.state||result.zip!==data.location.zip||result.county!==data.location.county)throw new Error('PDF response did not match this plan and location.');live.document_data=result;live.review_sources={...live.review_sources,...result.review_sources};Object.assign(plans[index],comparisonPlans([live],options.inventory || {plans:[]})[0]);render();},destroy(){destroyed=true;observer?.disconnect();for(const target of targets)target.removeEventListener('change',render);}};
 }
