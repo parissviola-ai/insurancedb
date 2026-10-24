@@ -24,7 +24,8 @@ DOC_TYPES = {'1':'enrollment','2':'evidence','3':'benefits','1027':'provider_dir
 def pdf_url(url):
     p = urlparse(url)
     valid = (p.scheme == 'https' and p.port in (None,443) and not p.username and not p.password and
-             ((p.hostname == 'www.aetna.com' and p.path.startswith('/medicare/documents/')) or
+             ((p.hostname == 'www.healthspring.com' and p.path.startswith('/static/docs/medicare/plans/')) or
+              (p.hostname == 'www.aetna.com' and p.path.startswith('/medicare/documents/')) or
               (p.hostname == 'www.aarpmedicareplans.com' and p.path.startswith(('/alphadog/','/online_documents/')))))
     if not valid:
         raise ValueError('Unexpected official document URL')
@@ -75,6 +76,8 @@ def read_pdf(url, refresh=False):
 
 
 def document_catalog(plan,loc):
+    if plan['carrier']=='HealthSpring':
+        return [dict(doc) for doc in plan.get('documents',[])]
     if plan['carrier']=='Aetna':
         invoke,source,_,_=carriers.aetna_session(loc)
         contract,pbp=plan['official_id'].split('-')[:2]
@@ -116,14 +119,21 @@ def document_catalog(plan,loc):
     return docs
 
 
-def verified_text(text,plan,kind):
+def verified_text(text,plan,kind,url=None):
     header=normalize(text[:14000]);year=str(plan['year'])
     if year not in header:raise ValueError('PDF plan year could not be verified')
     if kind=='formulary':return  # Explicit plan-bound carrier catalog supplies shared formulary linkage.
     identity=plan['official_id']
     compact=re.sub(r'[_\s]+','-',header)
     if identity not in compact:
-        raise ValueError('PDF plan identity could not be verified')
+        # HealthSpring sometimes prints contract/PBP only. The full segment
+        # must also be supplied by its exact-plan public catalog and filename.
+        stem=('sb-' if kind=='benefits' else 'eoc-')+plan['official_id'].lower()+'.pdf'
+        exact_healthspring=(plan['carrier']=='HealthSpring' and url and
+            urlparse(pdf_url(url)).path==f"/static/docs/medicare/plans/{plan['year']}/"+stem and
+            '-'.join(plan['official_id'].split('-')[:2]) in compact)
+        if not exact_healthspring:
+            raise ValueError('PDF plan identity could not be verified')
     if kind=='benefits':
         identities=set(re.findall(r'[HSR]\d{4}-\d{3}(?:-\d{3})?',header[:4500].replace('_','-')))
         if len(identities)>1:
@@ -164,6 +174,8 @@ def parse_benefits(text,url):
         # Optional paid riders are not part of the base plan benefit.
         if 'included with your plan' in before.lower() or not re.search(r'(?:optional|platinum dental rider)',before,re.I):
             add('dental',dental,'year',dental_note)
+    healthspring_dental=re.search(r'Maximum\s+Coverage\s+Amount\s*\$'+amount+r'\s+yearly allowance for preventive and\s+comprehensive dental services',text,re.I)
+    add('dental',healthspring_dental,'year','Annual combined preventive and comprehensive dental allowance. Cigna Dental Allowance (DPPO) vendor, network, exclusions and reimbursement rules apply; confirm the plan document.')
     # Read benefit-specific allowance sentences in every section occurrence;
     # an EOC's first heading may be a table of contents entry.
     for heading in re.finditer(r'(?:Dental|Vision) services',text,re.I):
@@ -199,6 +211,7 @@ def parse_benefits(text,url):
         unavailable['dental']='Optional paid dental rider — base annual amount not verified'
         notes['dental']='Dental rider benefits require an additional premium; not counted as a base-plan allowance.'
     otc_patterns=[
+        r'Over-the-Counter\s*\(OTC\)\s*Allowance[^$]{0,220}\$'+amount+r'\s+allowance each quarter',
         r'(?:OTC credit|Over-the-counter)[^$]{0,100}\$'+amount+r'\s+credit\s+(?:every|per)\s+quarter',
         r'Over-the-counter\s*\(OTC\)\s*credit\s*Quarterly credit is\s*\$'+amount,
         r'CVS Over-the-Counter[^$]{0,180}\$'+amount+r'\s+quarterly benefit amount',
@@ -268,7 +281,7 @@ def formulary_rows(text,carrier):
 
 def lookup(params):
     name=params.get('carrier');identity=params.get('plan_id','');year=str(params.get('year','2027'));zip_code=params.get('zip','');county=params.get('county','')
-    if name not in ('Aetna','UnitedHealthcare / AARP') or year not in ('2026','2027') or not re.fullmatch(r'[HSR]\d{4}-\d{3}(?:-\d{3})?',identity):
+    if name not in ('Aetna','UnitedHealthcare / AARP','HealthSpring') or year not in ('2026','2027') or not re.fullmatch(r'[HSR]\d{4}-\d{3}(?:-\d{3})?',identity):
         raise ValueError('Choose a supported carrier, exact plan ID and year')
     if not _slots.acquire(blocking=False):raise carriers.ShoppingError('busy','PDF downloads are busy. Retry shortly.')
     try:
@@ -276,7 +289,7 @@ def lookup(params):
         selected=next((c for c in geo['counties'] if c['code']==county),None)
         if not selected:raise ValueError('ZIP/county relationship could not be verified')
         loc={'zip':zip_code,'county':county,'county_name':selected['name'],'state':selected['state'],'year':int(year)}
-        plans=(carriers.aetna_plans(loc) if name=='Aetna' else carriers.uhc_plans(loc))
+        plans={'Aetna':carriers.aetna_plans,'UnitedHealthcare / AARP':carriers.uhc_plans,'HealthSpring':carriers.healthspring_plans}[name](loc)
         plan=next((p for p in plans if p['official_id']==identity),None)
         if not plan:raise ValueError('This exact plan was not returned for the selected location and year')
         docs=document_catalog(plan,loc)
@@ -289,7 +302,7 @@ def lookup(params):
             if not doc:continue
             try:
                 text,metadata=read_pdf(doc['url'],params.get('refresh')=='1')
-                doc.update(metadata);verified_text(text,plan,kind);doc['identity_verified']=True
+                doc.update(metadata);verified_text(text,plan,kind,doc['url']);doc['identity_verified']=True
                 if kind=='formulary':
                     result['formularies'][doc['url']]={**metadata,'rows':formulary_rows(text,name),'partial':True}
                 else:

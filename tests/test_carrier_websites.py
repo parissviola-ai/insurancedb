@@ -102,6 +102,35 @@ class CarrierWebsiteTests(unittest.TestCase):
         self.assertEqual(record['business'],'Part D')
         self.assertNotIn('moop',record.get('shopping_metrics',{}))
 
+    def test_healthspring_exact_shopping_benefits_and_document_binding(self):
+        record=c.plan('HealthSpring','H9725-009-003','Preferred',LOC,'https://shop.healthspringmedicare.com/28202/37119/plan/fixture')
+        c.shopping_benefits(record,4450)
+        raw={'PlanDataFields':[
+            {'Name':'Over-the-Counter Items (In Network)','Type':'In Network','Description':'$20.00 every 3 months.'},
+            {'Name':'Doctor Specialty Visit (In Network)','Type':'In Network','Description':'$20 copay per visit.'},
+            {'Name':'Inpatient Hospital Care (In Network)','Type':'In Network','Description':'$290 copay per day for days 1-5.<br>$0 copay per day for days 6-90.','Range':[{'RangeMin':1,'RangeMax':5,'Amount':290,'AmountType':1},{'RangeMin':6,'RangeMax':90,'Amount':0,'AmountType':1}]},
+            {'Name':'Dental (included with plan) (In Network)','Type':'In Network','Description':'Comprehensive dental included.'},
+            {'Name':'Dental Services (In Network)','Type':'In Network','Description':'$0 copay.'},
+            {'Name':'Other','Type':'In Network','Description':None}],
+            'Documents':[{'Types':[{'Name':'SUMMARY_OF_BENEFITS'}],'Name':'Summary of Benefits','Url':'https://www.healthspring.com/static/docs/medicare/plans/2027/sb-h9725-009-003.pdf'},
+                         {'Types':[{'Name':'SUMMARY_OF_BENEFITS'}],'Url':'https://www.healthspring.com/static/docs/medicare/plans/2027/sb-h9725-009-001.pdf'}]}
+        c.healthspring_benefits(record,raw)
+        self.assertEqual({k:v['amount'] for k,v in record['shopping_metrics'].items()},{'moop':4450,'otc':20,'specialist':20,'hospital':1450})
+        self.assertNotIn('dental',record['shopping_metrics'])
+        self.assertEqual(len(record['documents']),1)
+        self.assertIn('annual dollar allowance',record['benefit_review_notes']['dental'])
+        raw['PlanDataFields'][0]['Description']='$200 every 3 months for qualifying members.'
+        raw['PlanDataFields'][2]['Range'][1]['RangeMin']=5
+        record['shopping_metrics']={}
+        c.healthspring_benefits(record,raw)
+        self.assertNotIn('otc',record['shopping_metrics'])
+        self.assertNotIn('hospital',record['shopping_metrics'])
+
+    def test_healthspring_snp_flag_uses_type_or_explicit_name(self):
+        row={'ID':'fixture','ContractID':'H1234','PlanID':'001','SegmentID':'000','PlanYear':'2027','PlanName':'TotalCare (HMO D-SNP)','AnnualPlanPremium':0,'PlanSubType':'HMO','PlanSNPCategories':[],'SNPType':1}
+        with patch.object(c,'get_json',side_effect=[[{'SessionID':'fixture'}],{'MedicarePlans':[row]}]):
+            self.assertTrue(c.healthspring_plans(LOC)[0]['special_needs'])
+
     def test_uhc_exact_location_year_and_zero_premium(self):
         values={'selectedCounty':{'zipCode':'28202','stateCode':'NC','fipsStateCode':'37','fipsCountyCode':'119'},
                 'maPlansCount':1,'pdpPlansCount':0,'pdpPlans':[],

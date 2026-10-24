@@ -7,13 +7,14 @@ const money=value=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD
 const priority=value=>({0:'Not a priority',1:'Low',3:'Medium',5:'High'})[value] || 'Not a priority';
 const finite=value=>typeof value==='number'&&Number.isFinite(value)&&value>=0;
 const date=value=>value?new Date(value).toLocaleString():'Unverified';
+const supportsDocuments=p=>['Aetna','UnitedHealthcare / AARP'].includes(p.carrier)||(p.carrier==='HealthSpring'&&p.business==='Medicare Advantage');
 
 export function comparisonPlans(livePlans,inventory){
   return livePlans.map(live=>{
     const saved=preparedPlan(live,inventory);
     const extracted=live.document_data;
     const verified=extracted&&extracted.carrier===live.carrier&&extracted.official_id===live.official_id&&extracted.year===live.year&&extracted.state===live.state;
-    const documents=[...(saved?.documents || []),...(verified?extracted.documents:[])].map(d=>({...d})).filter((d,i,all)=>all.findIndex(x=>x.url===d.url)===i);
+    const documents=[...(saved?.documents || []),...(live.documents || []),...(verified?extracted.documents:[])].map(d=>({...d})).filter((d,i,all)=>all.findIndex(x=>x.url===d.url)===i);
     const metrics={};
     for(const [key,value] of Object.entries(saved?.benefit_metrics || {})){
       if(!finite(value.amount))continue;
@@ -26,7 +27,7 @@ export function comparisonPlans(livePlans,inventory){
     // borrow a CMS segment or benefits from a similar-sounding imported plan.
     for(const [key,value] of Object.entries(live.shopping_metrics || {}))if(benefits.some(([k])=>k===key)&&finite(value.amount)&&value.source_url)metrics[key]={...value,origin:'Public shopping response',source_retrieved_at:live.checked_at};
     if(finite(live.premium))metrics.premium={amount:live.premium,period:'month',notes:live.premium_notes || 'Monthly plan premium only. Part B and other costs still apply.',source_url:live.source_url,origin:'Public shopping response',source_retrieved_at:live.checked_at};
-    return {...live,documents,benefit_metrics:metrics,benefit_unavailable:{...saved?.benefit_unavailable,...(verified?extracted.benefit_unavailable:{})},benefit_review_notes:{...saved?.benefit_review_notes,...(verified?extracted.benefit_review_notes:{})},
+    return {...live,documents,benefit_metrics:metrics,benefit_unavailable:{...saved?.benefit_unavailable,...(verified?extracted.benefit_unavailable:{})},benefit_review_notes:{...saved?.benefit_review_notes,...live.benefit_review_notes,...(verified?extracted.benefit_review_notes:{})},
       ma_only:typeof live.has_drug_coverage==='boolean'?!live.has_drug_coverage:Boolean(saved?.ma_only),special_needs:Boolean(live.special_needs || saved?.special_needs),
       prepared_match:Boolean(saved),prepared_source_date:saved?.verified_on || '',provider_search_url:saved?.provider_search_url,
       scope_note:saved?.scope_note || '',drug_costs:saved?.drug_costs};
@@ -135,7 +136,7 @@ export function websiteComparison(container,data,plans,context,form,options={}){
   }
   async function loadPlanDocuments(targets){
     if(destroyed||bulkRunning||!options.loadDocuments)return;
-    const queue=targets.filter(p=>['Aetna','UnitedHealthcare / AARP'].includes(p.carrier));
+    const queue=targets.filter(p=>supportsDocuments(p));
     if(!queue.length)return;
     bulkRunning=true;for(const p of queue)queued.add(p.id);documentProgress={done:0,total:queue.length};render();
     const worker=async()=>{while(queue.length&&!destroyed){const p=queue.shift();await pull(p);documentProgress.done++;if(!destroyed)render();}};
@@ -165,15 +166,15 @@ export function websiteComparison(container,data,plans,context,form,options={}){
       for(const doc of p.documents){const row=node('p');link(row,({benefits:'Summary of Benefits',evidence:'Evidence of Coverage',formulary:'Formulary',provider_directory:'Provider directory',prior_authorization:'Prior Authorization Criteria',step_therapy:'Step Therapy Criteria',formulary_deletions:'Formulary deletions',changes:'Annual Notice of Changes',highlights:'Benefit highlights',stars:'Star ratings',enrollment:'Enrollment form',vendor_information:'Vendor information sheet'})[doc.kind] || doc.label || doc.kind,doc.url);row.append(node('small',doc.retrieved_at?' · PDF retrieved '+date(doc.retrieved_at):doc.source_date?' · carrier updated '+doc.source_date:' · linked from the carrier plan page'));details.append(row);}
       if(p.review_sources?.medication)link(details,p.carrier==='HealthSpring'?'Check prescriptions on HealthSpring':'Check prescriptions on carrier site',p.review_sources.medication);
       if(p.review_sources?.pharmacy){details.append(document.createTextNode(' · '));link(details,p.carrier==='HealthSpring'?'Choose pharmacy on HealthSpring':'Find a pharmacy on carrier site',p.review_sources.pharmacy);details.append(node('small',' These tools open on the carrier site. Enter drug and pharmacy choices there; exact quotes are not imported into this comparison.'));}
-      if(['Aetna','UnitedHealthcare / AARP'].includes(p.carrier)&&options.loadDocuments){const pullButton=node('button',loading.has(p.id)?'Reading official PDFs…':p.document_data?'Refresh official PDFs':'Pull official PDFs');pullButton.type='button';pullButton.disabled=loading.has(p.id);pullButton.addEventListener('click',()=>pull(p,Boolean(p.document_data)));details.append(pullButton);if(failures.has(p.id))details.append(node('p',failures.get(p.id)));if(p.document_data){details.append(node('p',p.document_data.documents.some(d=>d.identity_verified)?'Official PDFs read and cached on this computer.':'Documents linked; extraction needs review.'));if(p.document_data.issues?.length){const issues=node('details');issues.append(node('summary','Documents needing review'));for(const issue of p.document_data.issues)issues.append(node('p',issue));details.append(issues);}}}
+      if(supportsDocuments(p)&&options.loadDocuments){const pullButton=node('button',loading.has(p.id)?'Reading official PDFs…':p.document_data?'Refresh official PDFs':'Pull official PDFs');pullButton.type='button';pullButton.disabled=loading.has(p.id);pullButton.addEventListener('click',()=>pull(p,Boolean(p.document_data)));details.append(pullButton);if(failures.has(p.id))details.append(node('p',failures.get(p.id)));if(p.document_data){details.append(node('p',p.document_data.documents.some(d=>d.identity_verified)?'Official PDFs read and cached on this computer.':'Documents linked; extraction needs review.'));if(p.document_data.issues?.length){const issues=node('details');issues.append(node('summary','Documents needing review'));for(const issue of p.document_data.issues)issues.append(node('p',issue));details.append(issues);}}}
       if(p.benefit_notice)details.append(node('p',p.benefit_notice));
       if(p.scope_note)details.append(node('p',p.scope_note));const drugDetails=node('div'),providerDetails=node('div');details.append(node('h4','Medication review'),drugDetails,node('h4','Provider / facility review'),providerDetails);detailCells.set(p.id,{drugs:drugDetails,people:providerDetails});detailList.append(details);paintCoverage(p);
     }
     table.append(body);wrap.append(table);const scroll=node('div',undefined,'comparison-top-scroll');scroll.tabIndex=0;scroll.setAttribute('role','region');scroll.setAttribute('aria-label','Scroll carrier comparison horizontally');const track=node('div');scroll.append(track);
     scroll.addEventListener('scroll',()=>{wrap.scrollLeft=scroll.scrollLeft;});wrap.addEventListener('scroll',()=>{scroll.scrollLeft=wrap.scrollLeft;});const size=()=>{track.style.width=table.scrollWidth+'px';};observer=new ResizeObserver(size);observer.observe(table);requestAnimationFrame(size);
-    const docTargets=ranked.map(r=>r.plan).filter(p=>['Aetna','UnitedHealthcare / AARP'].includes(p.carrier));
-    if(docTargets.length&&options.loadDocuments){const bulk=node('button',bulkRunning?'Reading plan documents…':'Pull official PDFs for displayed Aetna / UHC plans');bulk.type='button';bulk.disabled=bulkRunning;bulk.addEventListener('click',()=>loadPlanDocuments(docTargets));comparison.append(bulk,node('p','Reads summaries, coverage documents and formularies. Shared PDFs are reused from the local cache. Large provider directories stay linked for review.','metadata'));}
-    if(documentProgress){const progress=node('p',bulkRunning?`Filling Aetna / UHC benefits automatically: ${documentProgress.done} of ${documentProgress.total} plans checked. Amounts appear as documents are read.`:`Automatic benefit checks complete: ${documentProgress.done} of ${documentProgress.total} plans checked.`, 'metadata');progress.setAttribute('role','status');comparison.append(progress);if(failures.size)comparison.append(node('p',`${failures.size} plan document checks could not finish. Open plan details to review or retry.`));}
+    const docTargets=ranked.map(r=>r.plan).filter(p=>supportsDocuments(p));
+    if(docTargets.length&&options.loadDocuments){const bulk=node('button',bulkRunning?'Reading plan documents…':'Pull official PDFs for displayed Aetna / UHC / HealthSpring plans');bulk.type='button';bulk.disabled=bulkRunning;bulk.addEventListener('click',()=>loadPlanDocuments(docTargets));comparison.append(bulk,node('p','Reads summaries, coverage documents and formularies. Shared PDFs are reused from the local cache. Large provider directories stay linked for review.','metadata'));}
+    if(documentProgress){const progress=node('p',bulkRunning?`Filling Aetna / UHC / HealthSpring benefits automatically: ${documentProgress.done} of ${documentProgress.total} plans checked. Amounts appear as documents are read.`:`Automatic benefit checks complete: ${documentProgress.done} of ${documentProgress.total} plans checked.`, 'metadata');progress.setAttribute('role','status');comparison.append(progress);if(failures.size)comparison.append(node('p',`${failures.size} plan document checks could not finish. Open plan details to review or retry.`));}
     comparison.append(node('p','Scroll across to compare benefits.','comparison-scroll-hint'),scroll,wrap);
     const download=node('button','Export comparison to Excel');download.type='button';download.disabled=!ranked.length;
     download.addEventListener('click',()=>{const blob=workbook(exportSheets(state,ranked,weights));const url=URL.createObjectURL(blob);const a=node('a');a.href=url;a.download=`carrier-comparison-${data.location?.year || ''}-${data.location?.zip || ''}.xlsx`;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);});comparison.append(download,node('p','Export includes the displayed plans, priorities, benefit sources, medication/provider checks and every carrier status. Add candidate names and reviewer notes offline.','metadata'));

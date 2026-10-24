@@ -1,5 +1,6 @@
 """Concurrent, anonymous public carrier shopping. No portal credentials or sessions."""
 import json
+from html import unescape
 import math
 import re
 import threading
@@ -175,11 +176,54 @@ def healthspring_plans(loc):
         premium = round(annual / 12, 2) if isinstance(annual, (int, float)) and annual >= 0 else None
         business = 'Part D' if p.get('PlanSubType') == 'PDP' or p['ContractID'].startswith('S') else 'Medicare Advantage'
         output.append(plan('HealthSpring', identity, p['PlanName'], loc, source, business, premium,
-                           bool(p.get('PlanSNPCategories'))))
+                           bool(p.get('PlanSNPCategories') or p.get('SNPType')) or 'SNP' in p['PlanName']))
         if isinstance(p.get('HasDrugCoverage'), bool):
             output[-1]['has_drug_coverage'] = p['HasDrugCoverage']
         shopping_benefits(output[-1], p.get('MaximumOutOfPocketCost'))
+        healthspring_benefits(output[-1],p)
     return output
+
+
+def healthspring_benefits(record, raw):
+    """Comparable amounts explicitly returned for this exact public plan."""
+    if record['business'] != 'Medicare Advantage':return
+    metrics=record['shopping_metrics'];review=record.setdefault('benefit_review_notes',{})
+    source=record['source_url']
+    def add(key,value,period,notes):
+        metrics[key]={'amount':value,'period':period,'notes':notes,'source_url':source}
+    for row in raw.get('PlanDataFields',[]):
+        if row.get('Type')!='In Network':continue
+        name=row.get('Name','');description=unescape(re.sub(r'<[^>]+>',' ',row.get('Description') or ''))
+        description=' '.join(description.split())
+        if name=='Over-the-Counter Items (In Network)':
+            match=re.fullmatch(r'\$([0-9][0-9,]*(?:\.[0-9]{1,2})?) every 3 months\.?',description)
+            if match:add('otc',float(match[1].replace(',','')),'quarter','Eligible OTC items only; public shopping lists this amount every 3 months. Confirm card, retailer and rollover rules.')
+            else:review['otc']=description
+        elif name=='Doctor Specialty Visit (In Network)':
+            match=re.fullmatch(r'\$([0-9][0-9,]*(?:\.[0-9]{1,2})?) copay per visit\.?',description)
+            if match:add('specialist',float(match[1].replace(',','')),'visit','In-network specialist copay from public shopping. Referrals, authorization and separate service charges may apply.')
+        elif name=='Inpatient Hospital Care (In Network)' and 'per day' in description:
+            days=[]
+            for day in range(1,8):
+                ranges=[r for r in row.get('Range',[]) if type(r.get('RangeMin')) is int and type(r.get('RangeMax')) is int and r['RangeMin']<=day<=r['RangeMax']]
+                if len(ranges)!=1:break
+                r=ranges[0];value=r.get('Amount')
+                if r.get('AmountType')!=1 or type(value) not in (int,float) or not math.isfinite(value) or value<0:break
+                days.append(value)
+            if len(days)==7:add('hospital',sum(days),'7-day stay','Modeled in-network 7-day stay from the public daily copay schedule: '+description+' Authorization, benefit-period and separate charges may apply.')
+        elif name=='Transportation (In Network)':
+            match=re.match(r'\$0 for ([0-9]+) one-way trips every year\b',description)
+            if match:add('transportation',int(match[1]),'one-way rides/year',description)
+        elif name=='Dental (included with plan) (In Network)':
+            review['dental']=description+' This listing does not establish an annual dollar allowance; review the Summary of Benefits.'
+    record['documents']=[]
+    kinds={'SUMMARY_OF_BENEFITS':'benefits','EVIDENCE_OF_COVERAGE':'evidence'}
+    for doc in raw.get('Documents',[]):
+        types={t.get('Name') for t in doc.get('Types',[])}
+        if 'NON_ENGLISH' in types:continue
+        kind=next((kinds[t] for t in types if t in kinds),None);url=doc.get('Url','');parsed=urlparse(url)
+        if kind and parsed.scheme=='https' and parsed.hostname=='www.healthspring.com' and not parsed.username and not parsed.password and parsed.path.startswith(f"/static/docs/medicare/plans/{record['year']}/") and record['official_id'].lower() in parsed.path.lower():
+            record['documents'].append({'kind':kind,'label':doc.get('Name',kind),'url':url,'metadata_checked_at':record['checked_at']})
 
 
 def apply_aetna_prices(plans, rows, products, year):

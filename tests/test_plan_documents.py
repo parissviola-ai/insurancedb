@@ -9,8 +9,30 @@ class PlanDocumentTests(unittest.TestCase):
     def test_document_urls_are_restricted(self):
         docs.pdf_url('https://www.aarpmedicareplans.com/alphadog/fixture')
         docs.pdf_url('https://www.aetna.com/medicare/documents/individual/2027/fixture.pdf')
+        docs.pdf_url('https://www.healthspring.com/static/docs/medicare/plans/2027/sb-h9725-009-003.pdf')
         for url in ['http://www.aarpmedicareplans.com/alphadog/x','https://example.com/x.pdf','https://www.aetna.com/account','https://user:pass@www.aetna.com/medicare/documents/x','https://www.aetna.com:8000/medicare/documents/x']:
             with self.subTest(url=url),self.assertRaises(ValueError):docs.pdf_url(url)
+
+    def test_healthspring_full_segment_catalog_required_for_short_pdf_cover(self):
+        plan={**PLAN,'carrier':'HealthSpring','official_id':'H9725-009-003','name':'HealthSpring Preferred (HMO)'}
+        text='Summary of Benefits 2027 HealthSpring Preferred (HMO) H9725_009'
+        url='https://www.healthspring.com/static/docs/medicare/plans/2027/sb-h9725-009-003.pdf'
+        docs.verified_text(text,plan,'benefits',url)
+        for wrong in [None,url.replace('009-003','009-001'),url.replace('/2027/','/2026/')]:
+            with self.assertRaises(ValueError):docs.verified_text(text,plan,'benefits',wrong)
+        with self.assertRaises(ValueError):docs.verified_text(text.replace('Preferred','Courage'),plan,'benefits',url)
+
+    def test_healthspring_dental_and_otc_are_allowances_not_copays(self):
+        text=('Dental Allowance $0 for preventive and comprehensive dental services.\n'
+              'Maximum Coverage Amount $1,450 yearly allowance for preventive and\ncomprehensive dental services.\n'
+              'Over-the-Counter (OTC) Allowance Get an allowance each quarter to help\n'
+              '$45 allowance each quarter for eligible OTC items.')
+        metrics,_,_=docs.parse_benefits(text,'https://example.com/sb.pdf')
+        self.assertEqual(metrics['dental']['amount'],1450)
+        self.assertEqual(metrics['otc']['amount'],45)
+        self.assertNotEqual(metrics['dental']['amount'],0)
+        metrics,_,_=docs.parse_benefits('Maximum Coverage Amount $2,000 yearly allowance for hearing aids.','https://example.com/sb.pdf')
+        self.assertNotIn('dental',metrics)
 
     def test_identity_year_and_cover_name(self):
         text='Summary of Benefits 2027\nH1234-001-000\nAARP Medicare Advantage from UHC NC-15 (HMO-POS)'

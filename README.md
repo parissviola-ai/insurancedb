@@ -458,3 +458,19 @@ unrestricted OTC-only credits. Missing OTC amounts are never inferred as zero.
 Validation used the 20 nonspecial-needs Aetna/UHC Medicare Advantage plans returned
 for 2027 in ZIPs 28262 (Mecklenburg) and 10701 (Westchester), with plan-bound
 Summary of Benefits and Evidence of Coverage documents cached privately.
+
+HealthSpring public plan shopping now supplies exact-plan quarterly OTC credits,
+single specialist copays, modeled seven-day hospital copays and annual one-way
+transportation trips when the response specifies comparable amounts. Daily hospital
+ranges must cover every modeled day exactly once, with dollar copays (not percentages).
+HealthSpring MA benefit PDFs load automatically alongside Aetna/UHC PDFs. The source
+catalog must bind the complete CMS segment and year; where a cover prints only the
+contract/PBP, its exact full-segment official catalog filename is also required.
+Dental yearly allowance and OTC quarterly allowance table layouts are supported.
+D-SNP/C-SNP records use explicit SNPType or name flags as well as category lists;
+users must enable the special-needs filter to display those plans. Drug-only
+HealthSpring results are not sent to the medical benefit PDF queue. Prescription
+and pharmacy links open the carrier tools; exact pharmacy quotes remain unconnected.
+Live validation: H9725-009-003 in ZIP 28697/Wilkes returned dental $1,450 and OTC
+$45/quarter; H9725-003-000 in ZIP 28262/Mecklenburg returned dental $2,000 and OTC
+$140/quarter. These are different plan segments and are never interchanged.
