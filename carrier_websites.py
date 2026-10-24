@@ -355,6 +355,20 @@ def aetna_plans(loc):
     return output
 
 
+def uhc_shopping_benefits(record,raw):
+    shopping_benefits(record)
+    if record['business']!='Medicare Advantage':return
+    amount=r'([0-9][0-9,]*(?:\.[0-9]{1,2})?)'
+    for key,label,period,pattern in [('moop','Out-of-pocket maximum','year',r'\$'+amount),('specialist','PCP and Specialist','visit',r'\$[0-9][0-9,.]* PCP and \$'+amount+r' specialist visits\.?')]:
+        for row in (raw.get('planBenefit') or [])+(raw.get('medicalBenefit') or []):
+            if row.get('benefitName')!=label:continue
+            for network in row.get('networkTypes') or []:
+                if network.get('networkType')!='INN':continue
+                match=re.fullmatch(pattern,str(network.get('benefitDescription','')).strip())
+                if match:
+                    record['shopping_metrics'][key]={'amount':float(match[1].replace(',','')),'period':period,'notes':('In-network annual medical maximum; premiums, Part D and excluded services are separate.' if key=='moop' else 'In-network specialist visit amount; separate services, referral and authorization rules apply.'),'source_url':record['source_url']}
+
+
 def uhc_plans(loc):
     base = 'https://www.aarpmedicareplans.com'
     source = f"{base}/health-plans/plan-summary/{loc['zip']}/{loc['county'][2:]}/{loc['year']}"
@@ -381,6 +395,7 @@ def uhc_plans(loc):
             detail = f"{base}/health-plans/details.html/{loc['zip']}/{loc['county'][2:]}/{p['planId']}/{loc['year']}"
             output.append(plan('UnitedHealthcare / AARP', identity, p['planName'], loc, detail,
                                'Part D' if p['planType'] == 'PDP' else 'Medicare Advantage', premium, bool(p.get('snpType'))))
+            uhc_shopping_benefits(output[-1],p)
             output[-1]['review_sources'] = {'medication': source + ('#PDP' if p['planType'] == 'PDP' else '#MA'),
                 'provider': 'https://findcare.guest.uhc.com/guest-plan-selection/browse?deeplink=eyJsYW5ndWFnZSI6ImVuLVVTIiwibG9iIjoiTVIifQ==',
                 'pharmacy': 'https://www.aarpmedicareplans.com/health-plans/aarp-pharmacy.html#/Pharmacy-Search-English'}

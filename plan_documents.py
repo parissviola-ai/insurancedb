@@ -179,7 +179,7 @@ def parse_benefits(text,url):
         # Optional paid riders are not part of the base plan benefit.
         if 'included with your plan' in before.lower() or not re.search(r'(?:optional|platinum dental rider)',before,re.I):
             add('dental',dental,'year',dental_note)
-    healthspring_dental=re.search(r'Maximum\s+Coverage\s+Amount\s*\$'+amount+r'\s+yearly allowance for preventive and\s+comprehensive dental services',text,re.I)
+    healthspring_dental=re.search(r'Maximum\s+Coverage\s+Amount\s*\$'+amount+r'\s+yearly allowance(?:,\s*in-network and out-\s*of-network combined,)?\s+for preventive and\s+comprehensive dental services',text,re.I)
     add('dental',healthspring_dental,'year','Annual combined preventive and comprehensive dental allowance. Cigna Dental Allowance (DPPO) vendor, network, exclusions and reimbursement rules apply; confirm the plan document.')
     # Read benefit-specific allowance sentences in every section occurrence;
     # an EOC's first heading may be a table of contents entry.
@@ -231,8 +231,10 @@ def parse_benefits(text,url):
         else:
             add('otc',match,'quarter','Eligible OTC products at participating retailers only. Quarterly allowance; four-quarter annual equivalent assumes no rollover. Carrier purchase and card rules apply.')
         break
-    add('specialist',re.search(r'Specialists?(?:[\d,]+)?\s+\$'+amount+r'\s+copay',text,re.I),'visit','In-network specialist visit copay; separate services and authorization rules may apply.')
-    eyewear=re.search(r'Routine eyewear\s+\$'+amount+r'\s+allowance every\s+(\d+)(?:\s+No coverage)?\s+years',text,re.I)
+    add('specialist',re.search(r'Specialists?\s*(?:[\d,]+\s*)?\$'+amount+r'\s+copay',text,re.I),'visit','In-network specialist visit copay; separate services and authorization rules may apply.')
+    hs_vision=re.search(r'Routine\s+Eyewear\s+\$0 until you[’\']ve spent your\s*\$'+amount+r'\s+yearly allowance',text,re.I)
+    add('vision',hs_vision,'year','Yearly routine eyewear allowance for the stated eyewear set. Vision vendor, network and purchase rules apply.')
+    eyewear=re.search(r'Routine eyewear\s+\$'+amount+r'\s+allowance every\s+(\d+)[^$]{0,200}?\byears\b',text,re.I)
     if eyewear:
         n=int(eyewear.group(2));notes['vision']=f'${eyewear.group(1)} eyewear allowance every {n} years. Network and purchase rules apply.'
         if n!=1:unavailable['vision']=f'Every {n} years — not an annual allowance';metrics.pop('vision',None)
@@ -253,10 +255,72 @@ def parse_benefits(text,url):
             metrics['hospital']={'amount':float(daily.group(1).replace(',',''))*min(n,7),'period':'7-day stay',
                 'notes':f'Modeled in-network 7-day stay: ${daily.group(1)} per day for days 1-{n}, then $0. Authorization and benefit-period rules apply.',
                 'source_url':url+'#page='+str(page)}
+    # Aetna places daily hospital schedules in separate network columns.
+    hospital_start=text.find('Hospital coverage')
+    if 'hospital' not in metrics and hospital_start>=0:
+        hospital_section=text[hospital_start:hospital_start+2400]
+        lines=hospital_section.splitlines();header=next((line for line in lines if 'Your in-network costs' in line or 'Your costs in our plan' in line),None)
+        if header:
+            left=header.find('Your in-network costs') if 'Your in-network costs' in header else header.find('Your costs in our plan')
+            right=header.find('Your out-of-network costs');right=right if right>=0 else None
+            row=next((i for i,line in enumerate(lines) if re.match(r'Inpatient\s*\(',line)),None)
+            if row is not None:
+                selected=[]
+                for line in lines[row:]:
+                    if re.match(r'Outpatient|Ambulatory|Primary care',line):break
+                    selected.append(line[left:right])
+                schedule=' '.join(' '.join(selected).split())
+                daily=re.search(r'\$'+amount+r' per day, days 1-(\d+); \$0 per day, days (\d+)-',schedule)
+                stay=re.search(r'\$'+amount+r' (?:copay )?per stay',schedule)
+                start=text.find(lines[row],hospital_start)
+                page=text[:start].count('\f')+1
+                if daily and int(daily[3])==int(daily[2])+1:
+                    metrics['hospital']={'amount':float(daily[1].replace(',',''))*min(int(daily[2]),7),'period':'7-day stay','notes':'Modeled in-network 7-day stay from the plan daily schedule: '+schedule+' Authorization, benefit-period and separate charges may apply.','source_url':url+'#page='+str(page)}
+                elif stay:
+                    metrics['hospital']={'amount':float(stay[1].replace(',','')),'period':'7-day stay','notes':'Stated in-network per-stay hospital copay for one modeled admission. Authorization, benefit-period and separate charges may apply.','source_url':url+'#page='+str(page)}
     transport=re.search(r'(?:Non-emergency transportation|Routine transportation|Transportation)\s+Not covered',text,re.I)
     if transport:
         metrics['transportation']={'amount':0,'period':'one-way rides/year','notes':'Routine plan transportation is explicitly listed as not covered. Ambulance benefits are separate.', 'source_url':url+'#page='+str(text[:transport.start()].count('\f')+1)}
     return metrics,notes,unavailable
+
+
+def parse_benefit_disclosures(text,url):
+    """Display verified allowance types and periods without changing ranking units."""
+    result={};amount=r'([0-9][0-9,]*(?:\.[0-9]{1,2})?)'
+    def add(key,match,display,notes):
+        result[key]={'display':display,'notes':notes,'source_url':url+'#page='+str(text[:match.start()].count('\f')+1)}
+    vision=re.search(r'Routine eyewear\s+\$'+amount+r'\s+allowance every\s+(\d+)[^$]{0,200}?\byears\b',text,re.I)
+    if vision:
+        add('vision',vision,'$'+vision[1]+' every '+vision[2]+' years','Eyewear allowance; purchase and network rules apply. Not treated as an annual allowance for ranking unless explicitly annual.')
+    hearing=re.search(r'Hearing aids\s*(?:\d)?\s+\$'+amount+r'\s+allowance',text,re.I)
+    if not hearing:hearing=re.search(r'Hearing aids[^$]{0,140}?annual benefit amount\s*\(allowance\)\s*of\s*\$'+amount,text,re.I)
+    if hearing:
+        terms=re.match(r'\s+for\s+(\d+)[^$]{0,160}?hearing\s+aids\s+every\s+year\b',text[hearing.end():hearing.end()+180],re.I)
+        display='$'+hearing[1]+(' / '+terms[1]+' hearing aids / year' if terms else ' hearing allowance')
+        add('hearing',hearing,display,'Hearing allowance rather than an Advanced-device copay. Confirm vendor, purchase and device rules in the source.')
+    prescription=re.search(r'(?:Prescription\s+)?Hearing\s+Aids\d?\s+\$'+amount+r'(?:\s*-\s*\$?'+amount+r')?\s+copay',text,re.I)
+    if prescription:
+        display='$'+prescription[1]+('–$'+prescription[2] if prescription[2] else '')+' copay'
+        if re.match(r'\s+for each device',text[prescription.end():prescription.end()+80],re.I):display+=' / device'
+        add('hearing',prescription,display,'Prescription hearing-aid copay or range. Device, vendor and per-ear rules apply; this does not identify an Advanced-device copay for ranking.')
+    for match in re.finditer(r'^Hearing aids\b',text,re.I|re.M):
+        before=text[:match.start()].splitlines()
+        header=next((line for line in reversed(before[-20:]) if 'Your in-network costs' in line or 'Your costs in our plan' in line),None)
+        if not header:continue
+        left=header.find('Your in-network costs') if 'Your in-network costs' in header else header.find('Your costs in our plan')
+        right=header.find('Your out-of-network costs');right=right if right>=0 else None
+        rows=[]
+        for line in text[match.start():match.start()+2400].splitlines():
+            if re.match(r'Dental services|Vision services',line,re.I):break
+            rows.append(line[left:right])
+        column=' '.join(' '.join(rows).split())
+        allowance=re.search(r'annual benefit amount\s*\(allowance\)\s*of\s*\$'+amount+r'\s+per ear',column,re.I)
+        if allowance:add('hearing',match,'$'+allowance[1]+' per ear / year','Annual hearing allowance per ear. Authorized vendor and out-of-network reimbursement rules apply; not an Advanced-device copay.')
+    rider=re.search(r'Platinum Dental Rider[^$]{0,350}?Additional\s+\$'+amount+r'\s+per month',text,re.I)
+    if rider:add('dental',rider,'Optional rider: +$'+rider[1]+' / month','Additional dental premium, not an included annual dental allowance. Review rider benefits and eligibility separately.')
+    uncovered=re.search(r'^[ \t]*Hearing\s+Aids\s+Not\s+covered\b',text,re.I|re.M)
+    if uncovered:add('hearing',uncovered,'Not covered','Routine hearing aids are explicitly listed as not covered; Medicare-covered hearing examinations are separate.')
+    return result
 
 
 def parse_drug_details(text,url,retrieved_at):
@@ -311,7 +375,7 @@ def lookup(params):
         if not plan:raise ValueError('This exact plan was not returned for the selected location and year')
         docs=document_catalog(plan,loc)
         if not docs:raise ValueError('No plan-specific documents were returned by the carrier.')
-        result={**loc,'carrier':name,'official_id':identity,'documents':docs,'benefit_metrics':{},'benefit_review_notes':{},'benefit_unavailable':{},'formularies':{},'drug_details':[],'issues':[],'review_sources':dict(plan.get('review_sources',{}))}
+        result={**loc,'carrier':name,'official_id':identity,'documents':docs,'benefit_metrics':{},'benefit_disclosures':{},'benefit_review_notes':{},'benefit_unavailable':{},'formularies':{},'drug_details':[],'issues':[],'review_sources':dict(plan.get('review_sources',{}))}
         directory=next((d for d in docs if d['kind']=='provider_directory'),None)
         if directory:result['review_sources']['provider']=directory['url']
         for kind in ('benefits','evidence','formulary'):
@@ -327,6 +391,11 @@ def lookup(params):
                         result['drug_details'].extend(parse_drug_details(text,doc['url'],metadata['retrieved_at']))
                         continue
                     metrics,notes,unavailable=parse_benefits(text,doc['url'])
+                    if kind=='benefits':
+                        disclosures=parse_benefit_disclosures(text,doc['url'])
+                        for value in disclosures.values():value['source_retrieved_at']=metadata['retrieved_at']
+                        result['benefit_disclosures'].update(disclosures)
+                        if 'hearing' in disclosures and 'hearing' not in metrics:unavailable['hearing']='Benefit type differs from an Advanced-device copay'
                     if kind=='evidence':
                         metrics={k:v for k,v in metrics.items() if k in ('dental','moop','otc')}
                         notes={k:v for k,v in notes.items() if k in ('dental','moop','otc')}
@@ -347,5 +416,12 @@ def lookup(params):
         if plan.get('business','Medicare Advantage')=='Medicare Advantage' and reviewed and 'otc' not in result['benefit_metrics'] and 'otc' not in result['benefit_unavailable']:
             result['benefit_unavailable']['otc']='No separate OTC amount found in reviewed documents'
             result['benefit_review_notes']['otc']='No numeric OTC allowance was extracted from the verified documents. This is not a determination that OTC benefits are excluded; review the linked sources.'
+        if plan.get('business','Medicare Advantage')=='Medicare Advantage' and reviewed and 'transportation' not in result['benefit_metrics']:
+            result['benefit_unavailable']['transportation']='No routine ride count verified in reviewed documents'
+            result['benefit_review_notes']['transportation']='Ambulance and worldwide emergency transportation are separate benefits and do not establish routine rides.'
+        if plan.get('business','Medicare Advantage')=='Medicare Advantage' and reviewed:
+            for key,label in [('vision','routine eyewear allowance'),('hearing','hearing-aid amount')]:
+                if key not in result['benefit_metrics'] and key not in result['benefit_disclosures'] and key not in result['benefit_unavailable']:
+                    result['benefit_unavailable'][key]='No '+label+' verified in reviewed documents'
         return result
     finally:_slots.release()

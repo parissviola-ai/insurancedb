@@ -2,7 +2,7 @@ import {preparedPlan} from './website-coverage.js';
 import {rankPlans,priorityKeys} from './ranking.js';
 import {workbook} from './excel.js';
 
-export const benefits=[['premium','Monthly premium'],['dental','Dental / year'],['otc','OTC / quarter'],['moop','Medical maximum / year'],['specialist','Specialist / visit'],['hospital','Hospital / 7-day stay'],['vision','Eyewear / year'],['hearing','Advanced hearing aid / aid'],['transportation','Transportation rides / year']];
+export const benefits=[['premium','Monthly premium'],['dental','Dental benefit / period shown'],['otc','OTC / quarter'],['moop','Medical maximum / year'],['specialist','Specialist / visit'],['hospital','Hospital / 7-day stay'],['vision','Eyewear benefit / period shown'],['hearing','Hearing aid benefit / type shown'],['transportation','Transportation rides / year']];
 const money=value=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:2}).format(value);
 const priority=value=>({0:'Not a priority',1:'Low',3:'Medium',5:'High'})[value] || 'Not a priority';
 const finite=value=>typeof value==='number'&&Number.isFinite(value)&&value>=0;
@@ -28,7 +28,7 @@ export function comparisonPlans(livePlans,inventory){
     for(const [key,value] of Object.entries(live.shopping_metrics || {}))if(benefits.some(([k])=>k===key)&&finite(value.amount)&&value.source_url)metrics[key]={...value,origin:'Public shopping response',source_retrieved_at:live.checked_at};
     if(finite(live.premium))metrics.premium={amount:live.premium,period:'month',notes:live.premium_notes || 'Monthly plan premium only. Part B and other costs still apply.',source_url:live.source_url,origin:'Public shopping response',source_retrieved_at:live.checked_at};
     const drugDetails=[...(live.drug_details || []),...(verified?extracted.drug_details || []:[])].filter((d,i,all)=>all.findIndex(x=>x.label===d.label&&x.description===d.description&&x.source_url===d.source_url)===i);
-    return {...live,documents,drug_details:drugDetails,benefit_metrics:metrics,benefit_unavailable:{...(saved&&!metrics.otc?{otc:'No verified OTC amount in saved documents'}:{}),...saved?.benefit_unavailable,...(verified?extracted.benefit_unavailable:{})},benefit_review_notes:{...saved?.benefit_review_notes,...live.benefit_review_notes,...(verified?extracted.benefit_review_notes:{})},
+    return {...live,documents,drug_details:drugDetails,benefit_disclosures:{...saved?.benefit_disclosures,...(verified?extracted.benefit_disclosures:{})},benefit_metrics:metrics,benefit_unavailable:{...(saved&&!metrics.otc?{otc:'No verified OTC amount in saved documents'}:{}),...saved?.benefit_unavailable,...(verified?extracted.benefit_unavailable:{})},benefit_review_notes:{...saved?.benefit_review_notes,...live.benefit_review_notes,...(verified?extracted.benefit_review_notes:{})},
       ma_only:typeof live.has_drug_coverage==='boolean'?!live.has_drug_coverage:Boolean(saved?.ma_only),special_needs:Boolean(live.special_needs || saved?.special_needs),
       prepared_match:Boolean(saved),prepared_source_date:saved?.verified_on || '',provider_search_url:saved?.provider_search_url,
       scope_note:saved?.scope_note || '',drug_costs:saved?.drug_costs};
@@ -36,7 +36,7 @@ export function comparisonPlans(livePlans,inventory){
 }
 export function visibleRanked(plans,weights,options={}){
   const shown=plans.filter(p=>(!options.carrier || p.carrier===options.carrier)&&(!options.business || p.business===options.business)&&(options.includeSpecial || !p.special_needs));
-  const medical=rankPlans(shown.filter(p=>p.business==='Medicare Advantage'),weights,options.needsDrugs);
+  const medical=rankPlans(shown.filter(p=>p.business==='Medicare Advantage'),weights,options.needsDrugs).map(r=>r.reason==='Missing a selected benefit amount'&&Object.keys(weights).some(k=>weights[k]>0&&!r.plan.benefit_metrics[k]&&r.plan.benefit_disclosures[k])?{...r,reason:'Selected benefit has different units — review details'}:r);
   const other=shown.filter(p=>p.business!=='Medicare Advantage').map(plan=>({plan,score:null,reason:'Different product type — compare separately'}));
   return [...medical,...other];
 }
@@ -84,9 +84,9 @@ export function exportSheets(state,ranked,weights){
   for(const {plan:p,score,reason} of ranked){
     const checks=state.coverage.get(p.id);
     rows.push([p.carrier,p.name,p.official_id,p.year,p.business,score===null?'Unranked':Math.round(score),score===null?reason:'Relative benefit match only',
-      ...benefits.map(([k])=>p.business==='Part D'&&k!=='premium'?'Not applicable — drug-only plan':p.benefit_metrics[k]?.amount ?? p.benefit_unavailable[k] ?? 'Unverified'),p.benefit_metrics.otc?p.benefit_metrics.otc.amount*4:'Unverified',
+      ...benefits.map(([k])=>p.business==='Part D'&&k!=='premium'?'Not applicable — drug-only plan':p.benefit_metrics[k]?.amount ?? p.benefit_disclosures[k]?.display ?? p.benefit_unavailable[k] ?? 'Unverified'),p.benefit_metrics.otc?p.benefit_metrics.otc.amount*4:'Unverified',
       summary(checks?.medications,state.context.medications.length),summary(checks?.providers,state.context.providers.length),p.source_url,p.checked_at,p.documents.map(d=>d.kind+': '+d.url+' (retrieved '+(d.retrieved_at || 'unverified')+')').join('\n'),p.drug_details.map(d=>d.label+': '+d.description+' — '+d.source_url).join('\n'),'','']);
-    for(const [key,label] of benefits){const m=p.benefit_metrics[key];sources.push([p.carrier,p.name,p.official_id,label,m?.amount ?? 'Unverified',m?.period || '',m?.notes || p.benefit_unavailable[key] || p.benefit_review_notes[key] || 'Unverified',m?.source_url || '',m?.origin || '',m?.source_retrieved_at || '']);}
+    for(const [key,label] of benefits){const m=p.benefit_metrics[key],d=p.benefit_disclosures[key];sources.push([p.carrier,p.name,p.official_id,label,m?.amount ?? d?.display ?? 'Unverified',m?.period || (d?'As stated':''),m?.notes || d?.notes || p.benefit_unavailable[key] || p.benefit_review_notes[key] || 'Unverified',m?.source_url || d?.source_url || '',m?.origin || (d?'Official plan PDF — different comparison units':''),m?.source_retrieved_at || d?.source_retrieved_at || '']);}
     for(const [kind,selections] of [['medications',state.context.medications],['providers',state.context.providers]]){
       const values=checks?.[kind] || selections.map(s=>({kind:kind==='medications'?'Medication':s.kind==='facility'?'Facility':'Provider',query:s.label || s.name || s.term,status:'pending',message:'Check pending or unavailable — unverified',matches:[]}));
       for(const check of values){if(!check.matches.length)coverage.push([p.carrier,p.name,p.official_id,check.kind,check.query,check.status,check.message,'','','',p.review_sources?.[kind==='medications'?'medication':'provider'] || p.source_url,'','','','','']);
@@ -99,9 +99,10 @@ export function exportSheets(state,ranked,weights){
 }
 function node(tag,text,cls){const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n;}
 function link(parent,text,url){try{const u=new URL(url);if(u.protocol!=='https:'||u.username||u.password)return;const a=node('a',text);a.href=u.href;a.target='_blank';a.rel='noopener noreferrer';parent.append(a);}catch{}}
-function metricValue(key,m){return key==='transportation'?m.amount+' one-way rides':money(m.amount);}
+function metricValue(key,m){return key==='transportation'?m.amount+' one-way rides':money(m.amount)+(['dental','vision'].includes(key)?' / year':key==='hearing'?' / aid':'');}
 function metricCell(parent,plan,key,documentStatus){if(plan.business==='Part D'&&key!=='premium'){parent.append(node('span','Not applicable — drug-only plan'));return;}const m=plan.benefit_metrics[key];
   if(m){link(parent,metricValue(key,m),m.source_url);if(key==='otc')parent.append(node('small',money(m.amount*4)+' annual equivalent; four quarters, no rollover assumed.'));if(m.notes)parent.append(node('small',m.notes));}
+  else if(plan.benefit_disclosures[key]){const d=plan.benefit_disclosures[key];link(parent,d.display,d.source_url);if(d.notes)parent.append(node('small',d.notes));}
   else parent.append(node('span',plan.benefit_unavailable[key] || documentStatus || 'Unverified'));
 }
 function renderChecks(container,checks,plan,kind,requested){
@@ -159,11 +160,11 @@ export function websiteComparison(container,data,plans,context,form,options={}){
     observer?.disconnect();coverageCells=new Map();detailCells=new Map();pdpCoverageCells=new Map();comparison.replaceChildren();detailList.replaceChildren();
     weights=Object.fromEntries(priorityKeys.map(k=>[k,Number(form.elements['weight_'+k].value)]));state.filters.includeSpecial=form.elements.special_needs.checked;
     ranked=visibleRanked(plans,weights,{...state.filters,needsDrugs:context.medications.length>0});
-    comparison.append(node('p','Plan Finder · ZIP-based plan details v4','metadata'),node('h3',`${plans.length} plans returned`),node('p',`${ranked.length} shown with the current carrier, product and special-needs filters. Change priorities above to update rankings without another website search.`));
+    comparison.append(node('p','Plan Finder · ZIP-based plan details v5','metadata'),node('h3',`${plans.length} plans returned`),node('p',`${ranked.length} shown with the current carrier, product and special-needs filters. Change priorities above to update rankings without another website search.`));
     const top=ranked.filter(r=>r.score!==null && Math.abs(r.score-ranked.find(x=>x.score!==null)?.score)<0.0001);
     if(top.length)comparison.append(node('p','Top benefit match'+(top.length>1?'es (tie)':'')+': '+top.map(r=>r.plan.name).join('; '),'recommendation'));
     else comparison.append(node('p',ranked.length&&ranked.every(r=>r.plan.business==='Part D')?'Drug-only plans are compared separately below.':'No ranking available for the current priorities. Review missing amounts or change priorities.'));
-    comparison.append(node('p','Rankings compare selected benefits, not overall suitability. Missing amounts stay unverified. Special-needs and Part D plans are not ranked against other medical plans.'));
+    comparison.append(node('p','Rankings compare selected benefits, not overall suitability. Missing amounts stay unverified. Special-needs and Part D plans are not ranked against other medical plans. Ranking uses annual eyewear and Advanced hearing-aid copays; other periods, allowances and device ranges are shown with their source terms and are not scored as those units.'));
     const wrap=node('div',undefined,'comparison-scroll');const table=node('table');table.append(node('caption',`${data.location?.year || ''} public website plans for ZIP ${data.location?.zip || ''}`));
     const head=node('tr');for(const title of ['Carrier / plan','Benefit match',...benefits.map(([,label])=>label),'Medications','Providers / facilities','Details']){const th=node('th',title);th.scope='col';head.append(th);}const thead=node('thead');thead.append(head);table.append(thead);const body=node('tbody');
     for(const {plan:p,score,reason} of ranked){const tr=node('tr');if(top.some(t=>t.plan.id===p.id))tr.className='top-match';const label=node('th');label.scope='row';label.append(planLink(p),node('small',p.carrier+' · '+p.official_id+' · '+p.business));tr.append(label,node('td',score===null?reason:Math.round(score)+' / 100'));

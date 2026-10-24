@@ -59,3 +59,14 @@ const detailIndex=comparisonSheet.rows[0].indexOf('Drug coverage details');
 assert(detailIndex>=0);assert(comparisonSheet.rows[1][detailIndex].includes('$700'));
 for(const sheet of drugSheets)for(const row of sheet.rows)assert.equal(row.length,sheet.rows[0].length);
 console.log('Part D drug benefit details remain source-linked in comparison and Excel.');
+
+const differentUnits={...pdfResult,benefit_disclosures:{vision:{display:'$200 every 2 years',source_url:'https://example.com/new.pdf#page=6',notes:'Not an annual allowance',source_retrieved_at:'2026-10-24'}},benefit_unavailable:{vision:'Every 2 years — not an annual allowance'}};
+const disclosed=comparisonPlans([{...live,document_data:differentUnits}],{plans:[saved]})[0];
+assert.equal(disclosed.benefit_disclosures.vision.display,'$200 every 2 years');
+assert.equal(disclosed.benefit_metrics.vision,undefined);
+const disclosedRank=visibleRanked([disclosed],{vision:5},{includeSpecial:true})[0];
+assert.equal(disclosedRank.score,null);assert.match(disclosedRank.reason,/different units/);
+const disclosedSheets=exportSheets(state,[disclosedRank],{vision:5});
+assert(disclosedSheets.find(s=>s.name==='Plan comparison').rows[1].includes('$200 every 2 years'));
+assert(disclosedSheets.find(s=>s.name==='Benefit sources').rows.some(row=>row.includes('https://example.com/new.pdf#page=6')));
+console.log('Alternate benefit units display and export with sources without being ranked as annual amounts.');

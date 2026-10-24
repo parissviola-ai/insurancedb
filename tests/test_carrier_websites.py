@@ -157,6 +157,16 @@ class CarrierWebsiteTests(unittest.TestCase):
         self.assertIn('preferred retail',r['drug_details'][1]['description'])
         self.assertIn('Not an exact prescription quote',r['drug_details'][1]['description'])
 
+    def test_uhc_shopping_uses_explicit_network_rows_only(self):
+        r=c.plan('UnitedHealthcare / AARP','H1234-001-000','Fixture',LOC,'https://example.com')
+        raw={'planBenefit':[{'benefitName':'Out-of-pocket maximum','networkTypes':[{'networkType':'OON','benefitDescription':'$14,800 when using in and out-of-network providers'},{'networkType':'INN','benefitDescription':'$9,500'}]}],
+             'medicalBenefit':[{'benefitName':'PCP and Specialist','networkTypes':[{'networkType':'OON','benefitDescription':'$0 PCP and $90 specialist visits'},{'networkType':'INN','benefitDescription':'$0 PCP and $45 specialist visits'}]}]}
+        c.uhc_shopping_benefits(r,raw)
+        self.assertEqual(r['shopping_metrics']['moop']['amount'],9500)
+        self.assertEqual(r['shopping_metrics']['specialist']['amount'],45)
+        r['business']='Part D';c.uhc_shopping_benefits(r,raw)
+        self.assertEqual(r['shopping_metrics'],{})
+
     def test_uhc_exact_location_year_and_zero_premium(self):
         values={'selectedCounty':{'zipCode':'28202','stateCode':'NC','fipsStateCode':'37','fipsCountyCode':'119'},
                 'maPlansCount':1,'pdpPlansCount':0,'pdpPlans':[],

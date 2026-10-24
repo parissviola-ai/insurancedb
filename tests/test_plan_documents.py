@@ -52,6 +52,39 @@ class PlanDocumentTests(unittest.TestCase):
         self.assertIn('Tier 1 and Tier 2',rows[0]['description'])
         self.assertNotIn('What is',rows[0]['description'])
 
+    def test_aetna_hospital_daily_schedule_uses_only_network_column(self):
+        def row(label,network,other):return label.ljust(29)+network.ljust(44)+other
+        text='Hospital coverage\n'+row('Benefit','Your in-network costs','Your out-of-network costs')+'\n'+row('Inpatient (unlimited','$408 per day, days 1-6; $0 per day,','$508 per day, days 1-6; $0 per day,')+'\n'+row('number of days)','days 7-90; $0 for additional days','days 7-90; $0 for additional days')+'\nOutpatient hospital $99 copay'
+        metrics,_,_=docs.parse_benefits(text,'https://example.com/sb.pdf')
+        self.assertEqual(metrics['hospital']['amount'],2448)
+        self.assertNotIn('508',metrics['hospital']['notes'])
+        metrics,_,_=docs.parse_benefits(text.replace('days 7-90','days 8-90'),'https://example.com/sb.pdf')
+        self.assertNotIn('hospital',metrics)
+
+    def test_display_alternate_units_without_converting_them_to_ranking_metrics(self):
+        text=('Routine eyewear $200 allowance every 2 If you use an out-of-network provider\nyears for 1 pair.\n'
+              'Hearing aids2 $700 allowance for 2 hearing aids every year\n')
+        display=docs.parse_benefit_disclosures(text,'https://example.com/sb.pdf')
+        self.assertEqual(display['vision']['display'],'$200 every 2 years')
+        self.assertEqual(display['hearing']['display'],'$700 / 2 hearing aids / year')
+        metrics,_,unavailable=docs.parse_benefits(text,'https://example.com/sb.pdf')
+        self.assertNotIn('vision',metrics)
+        self.assertNotIn('hearing',metrics)
+        self.assertIn('2 years',unavailable['vision'])
+        display=docs.parse_benefit_disclosures('Hearing Aids $399-$1,800 copay for each device.','https://example.com/sb.pdf')
+        self.assertEqual(display['hearing']['display'],'$399–$1,800 copay / device')
+        display=docs.parse_benefit_disclosures('   Hearing  Aids             Not           covered','https://example.com/sb.pdf')
+        self.assertEqual(display['hearing']['display'],'Not covered')
+
+    def test_healthspring_combined_dental_and_yearly_eyewear(self):
+        text=('Worldwide emergency maximum $50,000.\n'
+              'Maximum Coverage Amount $950 yearly allowance, in-network and out-\nof-network combined, for preventive and comprehensive dental services.\n'
+              'Routine Eyewear $0 until you’ve spent your $100 yearly allowance, in-network and out-of-network combined.')
+        metrics,_,_=docs.parse_benefits(text,'https://example.com/sb.pdf')
+        self.assertEqual(metrics['dental']['amount'],950)
+        self.assertEqual(metrics['vision']['amount'],100)
+        self.assertNotEqual(metrics['vision']['amount'],0)
+
     def test_identity_year_and_cover_name(self):
         text='Summary of Benefits 2027\nH1234-001-000\nAARP Medicare Advantage from UHC NC-15 (HMO-POS)'
         docs.verified_text(text,PLAN,'benefits')

@@ -508,3 +508,25 @@ explicit statuses; these changes do not imply every carrier has a full parser.
 Plan names in both the carrier comparison and the Part D table open and scroll to
 the corresponding lower details section. Mouse and keyboard activation focus the
 summary, and the open state is retained when automatic document updates rerender.
+
+Full chart audit improvements (ZIP-based plan details v5): Aetna hospital schedules
+are read from the in-network column only, including wrapped day ranges. HealthSpring
+combined-network annual dental limits and yearly routine eyewear allowance wording
+are supported. Alternate benefit disclosures preserve actual two-year eyewear,
+hearing allowances, per-device copay ranges and optional paid dental rider premiums
+with PDF page links and dates. They display in the chart and Excel but never replace
+annual/Advanced-device ranking metrics. The dental, eyewear and hearing columns
+show their periods/types explicitly. Explicitly uncovered hearing aids display
+"Not covered", never a fabricated $0 copay. Routine ride counts are not inferred
+from ambulance or worldwide emergency transportation. If reviewed sources do not
+yield a routine ride count or eyewear allowance, the chart explains that specific
+source gap instead of asserting coverage or showing a guessed amount.
+
+UHC exact INN shopping rows now also populate medical maximum and specialist values
+before PDF reading; combined or out-of-network limits are not substituted. The
+21-medical-plan Wilkes audit closed all five hospital extraction gaps, the remaining
+HealthSpring annual dental gap, and the missing annual eyewear/device disclosures.
+The remaining unconfirmed categories in that audit are 11 separate OTC amounts,
+13 routine ride counts and one routine eyewear allowance. These remain clearly
+identified source gaps, not zero-valued benefits. No provider selections were
+entered in that pasted search; no provider participation is inferred.
