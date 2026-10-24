@@ -410,7 +410,7 @@ plan document catalog. Aetna uses the observed anonymous `getPlanDocuments` acti
 UHC uses the observed plan-detail document catalog. No portal credentials, patient
 identifiers, or submitted medication lists are involved in document retrieval.
 
-Search all automatically reads Aetna and UHC plan PDFs after retrieving plans and initial coverage checks. Benefits, rankings, medication candidates and export data update as each plan finishes, with two concurrent document checks and visible progress. Failures stay visible in plan details and do not stop other plans. A per-plan **Pull official PDFs** action and a bulk action remain available for
+Search all automatically reads Aetna and UHC plan PDFs as soon as plans are retrieved, alongside initial coverage checks. Benefits, rankings, medication candidates and export data update as each plan finishes, with two concurrent document checks and visible progress. Failures stay visible in plan details and do not stop other plans. A per-plan **Pull official PDFs** action and a bulk action remain available for
 displayed Aetna/UHC plans. It downloads Summary of Benefits, Evidence of Coverage
 and formulary PDFs when available. Other documents (provider directory, vendor
 information, enrollment, highlights, ANOC, star ratings, prior authorization, step

@@ -98,9 +98,9 @@ export function exportSheets(state,ranked,weights){
 function node(tag,text,cls){const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n;}
 function link(parent,text,url){try{const u=new URL(url);if(u.protocol!=='https:'||u.username||u.password)return;const a=node('a',text);a.href=u.href;a.target='_blank';a.rel='noopener noreferrer';parent.append(a);}catch{}}
 function metricValue(key,m){return key==='transportation'?m.amount+' one-way rides':money(m.amount);}
-function metricCell(parent,plan,key){const m=plan.benefit_metrics[key];
+function metricCell(parent,plan,key,documentStatus){const m=plan.benefit_metrics[key];
   if(m){link(parent,metricValue(key,m),m.source_url);if(key==='otc')parent.append(node('small',money(m.amount*4)+' annual equivalent; four quarters, no rollover assumed.'));if(m.notes)parent.append(node('small',m.notes));}
-  else parent.append(node('span',plan.benefit_unavailable[key] || 'Unverified'));
+  else parent.append(node('span',plan.benefit_unavailable[key] || documentStatus || 'Unverified'));
 }
 function renderChecks(container,checks,plan,kind,requested){
   container.replaceChildren();if(!requested){container.append(node('p','Not requested'));return;}
@@ -121,7 +121,7 @@ export function websiteComparison(container,data,plans,context,form,options={}){
   const productLabel=node('label','Compare product type');const productFilter=node('select');productFilter.setAttribute('aria-label','Compare product type');productFilter.append(new Option('All returned products',''));
   for(const type of [...new Set(plans.map(p=>p.business))].sort())productFilter.append(new Option(type,type));productLabel.append(productFilter);controls.append(carrierLabel,productLabel);
   const comparison=node('section');const detailList=node('section');container.append(controls,comparison,detailList);
-  let destroyed=false;let bulkRunning=false;let documentProgress=null;const loading=new Set();const failures=new Map();
+  let destroyed=false;let bulkRunning=false;let documentProgress=null;const loading=new Set();const queued=new Set();const failures=new Map();
   let observer;let ranked=[];let weights={};let coverageCells=new Map();let detailCells=new Map();const openDetails=new Set();
   function paintCoverage(p){const checks=state.coverage.get(p.id),cells=coverageCells.get(p.id),details=detailCells.get(p.id);
     if(cells){cells.drugs.textContent=summary(checks?.medications,context.medications.length);cells.people.textContent=summary(checks?.providers,context.providers.length);}
@@ -129,7 +129,7 @@ export function websiteComparison(container,data,plans,context,form,options={}){
   }
   async function pull(p,refresh=false){
     if(destroyed||loading.has(p.id)||!options.loadDocuments)return;
-    loading.add(p.id);failures.delete(p.id);render();
+    queued.delete(p.id);loading.add(p.id);failures.delete(p.id);render();
     try{await options.loadDocuments(p,refresh);}catch(error){if(!destroyed)failures.set(p.id,error.message || 'PDF pull unavailable.');}
     finally{loading.delete(p.id);if(!destroyed)render();}
   }
@@ -137,7 +137,7 @@ export function websiteComparison(container,data,plans,context,form,options={}){
     if(destroyed||bulkRunning||!options.loadDocuments)return;
     const queue=targets.filter(p=>['Aetna','UnitedHealthcare / AARP'].includes(p.carrier));
     if(!queue.length)return;
-    bulkRunning=true;documentProgress={done:0,total:queue.length};render();
+    bulkRunning=true;for(const p of queue)queued.add(p.id);documentProgress={done:0,total:queue.length};render();
     const worker=async()=>{while(queue.length&&!destroyed){const p=queue.shift();await pull(p);documentProgress.done++;if(!destroyed)render();}};
     try{await Promise.all([worker(),worker()]);}finally{bulkRunning=false;if(!destroyed)render();}
   }
@@ -154,14 +154,14 @@ export function websiteComparison(container,data,plans,context,form,options={}){
     const wrap=node('div',undefined,'comparison-scroll');const table=node('table');table.append(node('caption',`${data.location?.year || ''} public website plans for ZIP ${data.location?.zip || ''}`));
     const head=node('tr');for(const title of ['Carrier / plan','Benefit match',...benefits.map(([,label])=>label),'Medications','Providers / facilities','Details']){const th=node('th',title);th.scope='col';head.append(th);}const thead=node('thead');thead.append(head);table.append(thead);const body=node('tbody');
     for(const {plan:p,score,reason} of ranked){const tr=node('tr');if(top.some(t=>t.plan.id===p.id))tr.className='top-match';const label=node('th',p.name);label.scope='row';label.append(node('small',p.carrier+' · '+p.official_id+' · '+p.business));tr.append(label,node('td',score===null?reason:Math.round(score)+' / 100'));
-      for(const [key] of benefits){const td=node('td');metricCell(td,p,key);tr.append(td);}
+      for(const [key] of benefits){const td=node('td');metricCell(td,p,key,loading.has(p.id)?'Reading plan documents…':queued.has(p.id)?'Waiting for plan documents…':failures.has(p.id)?'Document check failed — open details':undefined);tr.append(td);}
       const drugs=node('td'),people=node('td');coverageCells.set(p.id,{drugs,people});tr.append(drugs,people);
       const action=node('td');const a=node('a','View details');a.href='#website-plan-'+encodeURIComponent(p.id);a.addEventListener('click',event=>{event.preventDefault();const details=document.getElementById('website-plan-'+p.id);details.open=true;details.scrollIntoView({block:'nearest',behavior:'smooth'});});action.append(a);tr.append(action);body.append(tr);
       const details=node('details');details.id='website-plan-'+p.id;details.open=openDetails.has(p.id);details.addEventListener('toggle',()=>{if(details.open)openDetails.add(p.id);else openDetails.delete(p.id);});details.append(node('summary',p.carrier+' · '+p.name),node('p',p.official_id+' · '+p.business+' · '+p.year));
       if(p.special_needs)details.append(node('p','Special-needs eligibility must be confirmed. This plan is not ranked.'));
       link(details,'Official shopping source',p.source_url);details.append(node('p','Shopping checked: '+date(p.checked_at),'metadata'));
       details.append(node('p',p.document_data?.documents?.some(d=>d.identity_verified)?'Official PDF sources are attached. Amounts below retain their document dates.':p.prepared_match?'Benefits below use matched official documents. Their dates may differ from today’s shopping check.':'Only verified shopping values are available. Other benefits remain unverified.'));
-      const list=node('dl');for(const [key,title] of benefits){list.append(node('dt',title));const dd=node('dd');metricCell(dd,p,key);const m=p.benefit_metrics[key];if(m)dd.append(node('small',m.origin+' · retrieved '+date(m.source_retrieved_at)));if(!m&&p.benefit_review_notes[key])dd.append(node('small',p.benefit_review_notes[key]));list.append(dd);}details.append(list);
+      const list=node('dl');for(const [key,title] of benefits){list.append(node('dt',title));const dd=node('dd');metricCell(dd,p,key,loading.has(p.id)?'Reading plan documents…':queued.has(p.id)?'Waiting for plan documents…':undefined);const m=p.benefit_metrics[key];if(m)dd.append(node('small',m.origin+' · retrieved '+date(m.source_retrieved_at)));if(!m&&p.benefit_review_notes[key])dd.append(node('small',p.benefit_review_notes[key]));list.append(dd);}details.append(list);
       for(const doc of p.documents){const row=node('p');link(row,({benefits:'Summary of Benefits',evidence:'Evidence of Coverage',formulary:'Formulary',provider_directory:'Provider directory',prior_authorization:'Prior Authorization Criteria',step_therapy:'Step Therapy Criteria',formulary_deletions:'Formulary deletions',changes:'Annual Notice of Changes',highlights:'Benefit highlights',stars:'Star ratings',enrollment:'Enrollment form',vendor_information:'Vendor information sheet'})[doc.kind] || doc.label || doc.kind,doc.url);row.append(node('small',doc.retrieved_at?' · PDF retrieved '+date(doc.retrieved_at):doc.source_date?' · carrier updated '+doc.source_date:' · linked from the carrier plan page'));details.append(row);}
       if(p.review_sources?.medication)link(details,p.carrier==='HealthSpring'?'Check prescriptions on HealthSpring':'Check prescriptions on carrier site',p.review_sources.medication);
       if(p.review_sources?.pharmacy){details.append(document.createTextNode(' · '));link(details,p.carrier==='HealthSpring'?'Choose pharmacy on HealthSpring':'Find a pharmacy on carrier site',p.review_sources.pharmacy);details.append(node('small',' These tools open on the carrier site. Enter drug and pharmacy choices there; exact quotes are not imported into this comparison.'));}

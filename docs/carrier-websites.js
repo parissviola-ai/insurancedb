@@ -70,11 +70,12 @@ async function search(chosenCounty=''){
       link(item,c.source_url,'Carrier website');statuses.append(item);
     }
     carrierStatus.append(statuses);output.append(carrierStatus);
+    const documentTask=comparison.loadDocumentsAutomatically();
     if(context.medications.length || context.providers.length){
       output.append(node('p','Open plan details for medication, provider and source information. “Not checked” does not mean “not covered.”'));
-      await evaluateWebsiteCoverage(data.plans,context,signal,(plan,checks)=>{if(!signal.aborted)comparison?.updateCoverage(plan.id,checks);});
+      await evaluateWebsiteCoverage(data.plans,context,signal,(plan,checks)=>{if(!signal.aborted&&!plan.document_data)comparison?.updateCoverage(plan.id,checks);});
     }
-    if(!signal.aborted)await comparison.loadDocumentsAutomatically();
+    await documentTask;
   }catch(error){if(!signal.aborted)output.replaceChildren(node('h2','Carrier website search unavailable'),node('p',error.message||'No plan availability determined. Please retry.'));}
   finally{if(!signal.aborted){button.disabled=false;output.setAttribute('aria-busy','false');}}
 }
