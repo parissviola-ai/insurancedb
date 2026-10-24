@@ -26,6 +26,27 @@ def require_tools():
     return node, npm
 
 
+def prepare_pdf_reader():
+    """Install into an app-local virtual environment, never system Python."""
+    requirements = ROOT / 'requirements-local.txt'
+    wanted = requirements.read_text().strip().split('==')[1]
+    try:
+        import pypdf
+        if pypdf.__version__ == wanted:
+            return
+    except ImportError:
+        pass
+    import venv
+    environment = CACHE / 'python'
+    python = environment / ('Scripts/python.exe' if os.name == 'nt' else 'bin/python')
+    if not python.exists():
+        print('Setting up the free PDF reader in this application folder…', flush=True)
+        venv.EnvBuilder(with_pip=True).create(environment)
+    subprocess.run([str(python), '-m', 'pip', 'install', '--disable-pip-version-check',
+                    '--cache-dir', str(CACHE / 'pip'), '-r', str(requirements)], cwd=ROOT, check=True)
+    os.execv(str(python), [str(python), str(ROOT / 'run_local.py'), *sys.argv[1:]])
+
+
 def prepare_browser(node, npm):
     os.environ['PLAYWRIGHT_BROWSERS_PATH'] = str(CACHE / 'browsers')
     installed = ROOT / 'node_modules' / 'playwright' / 'package.json'
@@ -54,8 +75,9 @@ def main():
     try:
         node, npm = require_tools()
         if args.check:
-            print('Python and Node.js are ready. The first launch will set up the pinned search browser if needed.')
+            print('Python and Node.js are ready. The first launch will set up the free PDF reader and search browser if needed.')
             return 0
+        prepare_pdf_reader()
         prepare_browser(node, npm)
         import app
         from http.server import ThreadingHTTPServer

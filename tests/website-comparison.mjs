@@ -41,3 +41,12 @@ assert.equal(coverageLabel({status:'not_connected'}),'Not checked — connection
 assert.equal(coverageLabel({status:'no_drug_benefit'}),'No prescription coverage');
 assert.equal(coverageLabel({status:'review_required',result_type:'formulary_listing',matches:[{detail:'Tier 3 · PDF page 23'}]}),'Formulary match · Tier 3');
 console.log('Concise coverage labels preserve live, dated, candidate, unconnected and no-drug-benefit distinctions.');
+const pdfResult={carrier:live.carrier,official_id:live.official_id,year:2027,state:'NC',documents:[{kind:'benefits',url:'https://example.com/new.pdf',identity_verified:true}],
+  benefit_metrics:{dental:{amount:2000,period:'year',source_url:'https://example.com/new.pdf#page=3',source_retrieved_at:'2026-10-24T01:00:00Z'}},
+  benefit_unavailable:{vision:'Every 2 years — not an annual allowance'},benefit_review_notes:{vision:'$150 every 2 years'}};
+const withPDF=comparisonPlans([{...live,document_data:pdfResult}],{plans:[saved]})[0];
+assert.equal(withPDF.benefit_metrics.dental.amount,2000);assert.equal(withPDF.benefit_metrics.premium.amount,0);
+assert.equal(withPDF.benefit_metrics.vision,undefined);assert.equal(withPDF.benefit_metrics.dental.origin,'Official plan PDF');
+const wrongPDF=comparisonPlans([{...live,document_data:{...pdfResult,official_id:'H9999-999-999'}}],{plans:[saved]})[0];
+assert.equal(wrongPDF.benefit_metrics.dental.amount,1000);
+console.log('PDF comparison updates preserve source binding, live premium and nonannual benefit exclusions.');

@@ -5,6 +5,7 @@ import sqlite3
 import devoted
 import service_data
 import carrier_websites
+import plan_documents
 import mimetypes
 from datetime import date
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -107,10 +108,11 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         parsed = urlparse(self.path)
-        if parsed.path in ('/api/plans', '/api/devoted', '/api/document', '/api/carrier-websites', '/api/carrier-locations'):
+        if parsed.path in ('/api/plans', '/api/devoted', '/api/document', '/api/carrier-websites', '/api/carrier-locations', '/api/plan-documents'):
             params = {k:v[0] for k,v in parse_qs(parsed.query).items()}
             try:
-                data = (carrier_websites.locations(params.get('zip', '')) if parsed.path == '/api/carrier-locations' else
+                data = (plan_documents.lookup(params) if parsed.path == '/api/plan-documents' else
+                        carrier_websites.locations(params.get('zip', '')) if parsed.path == '/api/carrier-locations' else
                         carrier_websites.search(params) if parsed.path == '/api/carrier-websites' else
                         service_data.document_text(params.get('url','')) if parsed.path == '/api/document' else
                         devoted.lookup(params) if parsed.path == '/api/devoted' else search(params))

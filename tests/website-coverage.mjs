@@ -61,3 +61,13 @@ const broad=await evaluateWebsiteCoverage([publicPlan],{...providerContext,provi
 assert.equal(broad.get(publicPlan.id).providers[0].status,'network_candidates');
 globalThis.fetch=original;
 console.log('Exact live office is listed in network; broad provider matches remain candidates.');
+const aetnaPDF={...unknown,document_data:{carrier:'Aetna',official_id:unknown.official_id,year:2027,state:'NC',
+  documents:[{kind:'formulary',url:'https://example.com/form.pdf',identity_verified:true}],
+  formularies:{'https://example.com/form.pdf':{retrieved_at:'2026-10-24',rows:[{name:'amoxicillin/clavulanate potassium suspension reconstituted 600mg/5ml; 42.9mg/5ml',tier:'2',page:29,restrictions:'MO'}]}}}};
+const pdfContext={medications:[{name:'amoxicillin & k clavulanate for susp 600-42.9 mg/5ml',manual:false}],providers:[],loadData:async()=>[{plans:[]},{},{}]};
+const pdfChecks=await evaluateWebsiteCoverage([aetnaPDF],pdfContext,new AbortController().signal);
+assert.equal(pdfChecks.get(aetnaPDF.id).medications[0].matches[0].detail,'Tier 2 · PDF page 29');
+assert.equal(pdfChecks.get(aetnaPDF.id).medications[0].result_type,'formulary_candidates');
+const wrongDoc={...aetnaPDF,document_data:{...aetnaPDF.document_data,year:2026}};
+assert.equal((await evaluateWebsiteCoverage([wrongDoc],pdfContext,new AbortController().signal)).get(wrongDoc.id).medications[0].status,'not_connected');
+console.log('Official document drug candidates match ingredient text without asserting exact prescription equivalence.');

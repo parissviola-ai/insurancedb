@@ -12,6 +12,13 @@ export function preparedPlan(plan,inventory){
   // A plan-name or contract/PBP match alone cannot identify a CMS segment.
   return matches.length===1?matches[0]:null;
 }
+export function nameCandidate(source,query){
+  const ignored=new Set(['capsule','capsules','tablet','tablets','suspension','susp','reconstituted','oral','solution','injection','extended','release','immediate','chewable','selected','strength','potassium','hydrochloride']);
+  const tokens=(query.toLowerCase().match(/[a-z]{4,}/g) || []).filter(t=>!ignored.has(t));
+  if(!tokens.length)return false;
+  const text=source.toLowerCase();return tokens.every(t=>text.includes(t));
+}
+
 export function medicationChecks(plan,prepared,items,formularies){
   return items.map(item=>{
     const base={kind:'Medication',query:item.label || item.name,display_name:item.name,matches:[],status:'unverified',message:'No formulary match found. This does not mean the drug is excluded.'};
@@ -20,11 +27,11 @@ export function medicationChecks(plan,prepared,items,formularies){
     const docs=(prepared.documents || []).filter(d=>d.kind==='formulary');
     if(!docs.length)return {...base,status:'not_connected',message:'Drug checks are not connected for this plan.'};
     for(const doc of docs){
-      for(const row of (formularies[doc.url]?.rows || []).filter(r=>item.manual?r.name.toLowerCase().includes(item.name.toLowerCase()):r.name===item.name).slice(0,5)){
+      for(const row of (formularies[doc.url]?.rows || []).filter(r=>prepared.document_search?nameCandidate(r.name,item.name):item.manual?r.name.toLowerCase().includes(item.name.toLowerCase()):r.name===item.name).slice(0,5)){
         base.matches.push({name:row.name,detail:`Tier ${row.tier} · PDF page ${row.page}`,restrictions:row.restrictions || 'Confirm tier and all restrictions in the source.',source_url:doc.url+'#page='+row.page,source_date:doc.retrieved_at || formularies[doc.url]?.retrieved_at || '',status:'Formulary candidate — review required',cost:prepared.drug_costs?.tiers?.[row.tier] || null,cost_context:prepared.drug_costs || {}});
       }
     }
-    if(base.matches.length){base.status='review_required';base.result_type=item.manual?'formulary_candidates':'formulary_listing';base.message=item.manual?'Possible drug matches. Select the exact strength and form.':'Confirm the selected strength and form, then check pharmacy costs and restrictions.';}
+    if(base.matches.length){base.status='review_required';base.result_type=item.manual||prepared.document_search?'formulary_candidates':'formulary_listing';base.message=item.manual||prepared.document_search?'Possible drug matches. Select the exact strength and form.':'Confirm the selected strength and form, then check pharmacy costs and restrictions.';}
     return base;
   });
 }
@@ -44,6 +51,10 @@ export async function evaluateWebsiteCoverage(plans,context,signal,onUpdate=()=>
   catch{for(const p of plans){const row=records.get(p.id);for(const check of row.providers){check.status='unavailable';check.message='Exact-plan source data could not be loaded. Provider participation remains unverified.';}row.medications=context.medications.map(s=>({kind:'Medication',query:s.label || s.name,status:'unavailable',message:'Prepared formulary data could not be loaded. Coverage remains unverified.',matches:[]}));onUpdate(p,row);}return records;}
   if(signal?.aborted)return records;
   const matched=new Map(plans.map(p=>[p.id,preparedPlan(p,inventory)]));
+  for(const p of plans){const docs=p.document_data;if(!docs||docs.carrier!==p.carrier||docs.official_id!==p.official_id||docs.year!==p.year||docs.state!==p.state)continue;
+    const sources=docs.documents.filter(d=>d.kind==='formulary'&&d.identity_verified&&docs.formularies[d.url]);if(!sources.length)continue;
+    matched.set(p.id,{...p,documents:sources,document_search:true});formularies={...formularies,...docs.formularies};
+  }
   // The HealthSpring library explicitly maps full CMS segments to formularies.
   // Shared PDP documents without regional CMS linkage are never auto-attached.
   if(context.medications.length && plans.some(p=>p.carrier==='HealthSpring')){

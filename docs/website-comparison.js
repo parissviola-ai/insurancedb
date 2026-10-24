@@ -11,18 +11,22 @@ const date=value=>value?new Date(value).toLocaleString():'Unverified';
 export function comparisonPlans(livePlans,inventory){
   return livePlans.map(live=>{
     const saved=preparedPlan(live,inventory);
-    const documents=(saved?.documents || []).map(d=>({...d}));
+    const extracted=live.document_data;
+    const verified=extracted&&extracted.carrier===live.carrier&&extracted.official_id===live.official_id&&extracted.year===live.year&&extracted.state===live.state;
+    const documents=[...(saved?.documents || []),...(verified?extracted.documents:[])].map(d=>({...d})).filter((d,i,all)=>all.findIndex(x=>x.url===d.url)===i);
     const metrics={};
     for(const [key,value] of Object.entries(saved?.benefit_metrics || {})){
       if(!finite(value.amount))continue;
       const document=documents.find(d=>value.source_url?.split('#')[0]===d.url);
       metrics[key]={...value,origin:'Matched source document',source_retrieved_at:document?.retrieved_at || saved.verified_on || ''};
     }
+    if(verified)for(const [key,value] of Object.entries(extracted.benefit_metrics || {}))if(finite(value.amount))metrics[key]={...value,origin:'Official plan PDF'};
+    if(verified)for(const key of Object.keys(extracted.benefit_unavailable || {}))delete metrics[key];
     // Public shopping data belongs to this exact returned record; it need not
     // borrow a CMS segment or benefits from a similar-sounding imported plan.
     for(const [key,value] of Object.entries(live.shopping_metrics || {}))if(benefits.some(([k])=>k===key)&&finite(value.amount)&&value.source_url)metrics[key]={...value,origin:'Public shopping response',source_retrieved_at:live.checked_at};
     if(finite(live.premium))metrics.premium={amount:live.premium,period:'month',notes:live.premium_notes || 'Monthly plan premium only. Part B and other costs still apply.',source_url:live.source_url,origin:'Public shopping response',source_retrieved_at:live.checked_at};
-    return {...live,documents,benefit_metrics:metrics,benefit_unavailable:{...saved?.benefit_unavailable},benefit_review_notes:{...saved?.benefit_review_notes},
+    return {...live,documents,benefit_metrics:metrics,benefit_unavailable:{...saved?.benefit_unavailable,...(verified?extracted.benefit_unavailable:{})},benefit_review_notes:{...saved?.benefit_review_notes,...(verified?extracted.benefit_review_notes:{})},
       ma_only:typeof live.has_drug_coverage==='boolean'?!live.has_drug_coverage:Boolean(saved?.ma_only),special_needs:Boolean(live.special_needs || saved?.special_needs),
       prepared_match:Boolean(saved),prepared_source_date:saved?.verified_on || '',provider_search_url:saved?.provider_search_url,
       scope_note:saved?.scope_note || '',drug_costs:saved?.drug_costs};
@@ -110,19 +114,27 @@ function renderChecks(container,checks,plan,kind,requested){
     if(!check.matches.length)link(section,'Check on carrier site',plan.review_sources?.[kind] || plan.source_url);container.append(section);
   }
 }
-export function websiteComparison(container,data,plans,context,form){
+export function websiteComparison(container,data,plans,context,form,options={}){
   const state={data,plans,context,coverage:new Map(),filters:{carrier:'',business:'',includeSpecial:form.elements.special_needs.checked}};
   const controls=node('div',undefined,'grid two');const carrierLabel=node('label','Compare carriers');const carrierFilter=node('select');carrierFilter.setAttribute('aria-label','Compare carriers');carrierFilter.append(new Option('All returned carriers',''));
   for(const name of [...new Set(plans.map(p=>p.carrier))].sort())carrierFilter.append(new Option(name,name));carrierLabel.append(carrierFilter);
   const productLabel=node('label','Compare product type');const productFilter=node('select');productFilter.setAttribute('aria-label','Compare product type');productFilter.append(new Option('All returned products',''));
   for(const type of [...new Set(plans.map(p=>p.business))].sort())productFilter.append(new Option(type,type));productLabel.append(productFilter);controls.append(carrierLabel,productLabel);
   const comparison=node('section');const detailList=node('section');container.append(controls,comparison,detailList);
+  let destroyed=false;let bulkRunning=false;const loading=new Set();const failures=new Map();
   let observer;let ranked=[];let weights={};let coverageCells=new Map();let detailCells=new Map();const openDetails=new Set();
   function paintCoverage(p){const checks=state.coverage.get(p.id),cells=coverageCells.get(p.id),details=detailCells.get(p.id);
     if(cells){cells.drugs.textContent=summary(checks?.medications,context.medications.length);cells.people.textContent=summary(checks?.providers,context.providers.length);}
     if(details){renderChecks(details.drugs,checks?.medications,p,'medication',context.medications.length);renderChecks(details.people,checks?.providers,p,'provider',context.providers.length);}
   }
+  async function pull(p,refresh=false){
+    if(destroyed||loading.has(p.id)||!options.loadDocuments)return;
+    loading.add(p.id);failures.delete(p.id);render();
+    try{await options.loadDocuments(p,refresh);}catch(error){if(!destroyed)failures.set(p.id,error.message || 'PDF pull unavailable.');}
+    finally{loading.delete(p.id);if(!destroyed)render();}
+  }
   function render(){
+    if(destroyed)return;
     observer?.disconnect();coverageCells=new Map();detailCells=new Map();comparison.replaceChildren();detailList.replaceChildren();
     weights=Object.fromEntries(priorityKeys.map(k=>[k,Number(form.elements['weight_'+k].value)]));state.filters.includeSpecial=form.elements.special_needs.checked;
     ranked=visibleRanked(plans,weights,{...state.filters,needsDrugs:context.medications.length>0});
@@ -140,21 +152,24 @@ export function websiteComparison(container,data,plans,context,form){
       const details=node('details');details.id='website-plan-'+p.id;details.open=openDetails.has(p.id);details.addEventListener('toggle',()=>{if(details.open)openDetails.add(p.id);else openDetails.delete(p.id);});details.append(node('summary',p.carrier+' · '+p.name),node('p',p.official_id+' · '+p.business+' · '+p.year));
       if(p.special_needs)details.append(node('p','Special-needs eligibility must be confirmed. This plan is not ranked.'));
       link(details,'Official shopping source',p.source_url);details.append(node('p','Shopping checked: '+date(p.checked_at),'metadata'));
-      details.append(node('p',p.prepared_match?'Benefits below use matched official documents. Their dates may differ from today’s shopping check.':'Only verified shopping values are available. Other benefits remain unverified.'));
+      details.append(node('p',p.document_data?.documents?.some(d=>d.identity_verified)?'Official PDF sources are attached. Amounts below retain their document dates.':p.prepared_match?'Benefits below use matched official documents. Their dates may differ from today’s shopping check.':'Only verified shopping values are available. Other benefits remain unverified.'));
       const list=node('dl');for(const [key,title] of benefits){list.append(node('dt',title));const dd=node('dd');metricCell(dd,p,key);const m=p.benefit_metrics[key];if(m)dd.append(node('small',m.origin+' · retrieved '+date(m.source_retrieved_at)));if(!m&&p.benefit_review_notes[key])dd.append(node('small',p.benefit_review_notes[key]));list.append(dd);}details.append(list);
-      for(const doc of p.documents){const row=node('p');link(row,({benefits:'Summary of Benefits',evidence:'Evidence of Coverage',formulary:'Formulary',provider_directory:'Provider / pharmacy directory'})[doc.kind] || doc.kind,doc.url);row.append(node('small',' · source retrieved '+date(doc.retrieved_at)));details.append(row);}
-      if(p.review_sources?.medication)link(details,'Check prescriptions on HealthSpring',p.review_sources.medication);
-      if(p.review_sources?.pharmacy){details.append(document.createTextNode(' · '));link(details,'Choose pharmacy on HealthSpring',p.review_sources.pharmacy);details.append(node('small',' These tools open on HealthSpring. Drug selections and pharmacy choices are entered there; prices are not imported into this comparison.'));}
+      for(const doc of p.documents){const row=node('p');link(row,({benefits:'Summary of Benefits',evidence:'Evidence of Coverage',formulary:'Formulary',provider_directory:'Provider directory',prior_authorization:'Prior Authorization Criteria',step_therapy:'Step Therapy Criteria',formulary_deletions:'Formulary deletions',changes:'Annual Notice of Changes',highlights:'Benefit highlights',stars:'Star ratings',enrollment:'Enrollment form',vendor_information:'Vendor information sheet'})[doc.kind] || doc.label || doc.kind,doc.url);row.append(node('small',doc.retrieved_at?' · PDF retrieved '+date(doc.retrieved_at):doc.source_date?' · carrier updated '+doc.source_date:' · linked from the carrier plan page'));details.append(row);}
+      if(p.review_sources?.medication)link(details,p.carrier==='HealthSpring'?'Check prescriptions on HealthSpring':'Check prescriptions on carrier site',p.review_sources.medication);
+      if(p.review_sources?.pharmacy){details.append(document.createTextNode(' · '));link(details,p.carrier==='HealthSpring'?'Choose pharmacy on HealthSpring':'Find a pharmacy on carrier site',p.review_sources.pharmacy);details.append(node('small',' These tools open on the carrier site. Enter drug and pharmacy choices there; exact quotes are not imported into this comparison.'));}
+      if(['Aetna','UnitedHealthcare / AARP'].includes(p.carrier)&&options.loadDocuments){const pullButton=node('button',loading.has(p.id)?'Reading official PDFs…':p.document_data?'Refresh official PDFs':'Pull official PDFs');pullButton.type='button';pullButton.disabled=loading.has(p.id);pullButton.addEventListener('click',()=>pull(p,Boolean(p.document_data)));details.append(pullButton);if(failures.has(p.id))details.append(node('p',failures.get(p.id)));if(p.document_data){details.append(node('p',p.document_data.documents.some(d=>d.identity_verified)?'Official PDFs read and cached on this computer.':'Documents linked; extraction needs review.'));if(p.document_data.issues?.length){const issues=node('details');issues.append(node('summary','Documents needing review'));for(const issue of p.document_data.issues)issues.append(node('p',issue));details.append(issues);}}}
       if(p.benefit_notice)details.append(node('p',p.benefit_notice));
       if(p.scope_note)details.append(node('p',p.scope_note));const drugDetails=node('div'),providerDetails=node('div');details.append(node('h4','Medication review'),drugDetails,node('h4','Provider / facility review'),providerDetails);detailCells.set(p.id,{drugs:drugDetails,people:providerDetails});detailList.append(details);paintCoverage(p);
     }
     table.append(body);wrap.append(table);const scroll=node('div',undefined,'comparison-top-scroll');scroll.tabIndex=0;scroll.setAttribute('role','region');scroll.setAttribute('aria-label','Scroll carrier comparison horizontally');const track=node('div');scroll.append(track);
     scroll.addEventListener('scroll',()=>{wrap.scrollLeft=scroll.scrollLeft;});wrap.addEventListener('scroll',()=>{scroll.scrollLeft=wrap.scrollLeft;});const size=()=>{track.style.width=table.scrollWidth+'px';};observer=new ResizeObserver(size);observer.observe(table);requestAnimationFrame(size);
+    const docTargets=ranked.map(r=>r.plan).filter(p=>['Aetna','UnitedHealthcare / AARP'].includes(p.carrier));
+    if(docTargets.length&&options.loadDocuments){const bulk=node('button',bulkRunning?'Reading plan documents…':'Pull official PDFs for displayed Aetna / UHC plans');bulk.type='button';bulk.disabled=bulkRunning;bulk.addEventListener('click',async()=>{bulkRunning=true;render();const queue=[...docTargets];const worker=async()=>{while(queue.length&&!destroyed){const p=queue.shift();await pull(p);}};try{await Promise.all([worker(),worker()]);}finally{bulkRunning=false;render();}});comparison.append(bulk,node('p','Reads summaries, coverage documents and formularies. Shared PDFs are reused from the local cache. Large provider directories stay linked for review.','metadata'));}
     comparison.append(node('p','Scroll across to compare benefits.','comparison-scroll-hint'),scroll,wrap);
     const download=node('button','Export comparison to Excel');download.type='button';download.disabled=!ranked.length;
     download.addEventListener('click',()=>{const blob=workbook(exportSheets(state,ranked,weights));const url=URL.createObjectURL(blob);const a=node('a');a.href=url;a.download=`carrier-comparison-${data.location?.year || ''}-${data.location?.zip || ''}.xlsx`;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);});comparison.append(download,node('p','Export includes the displayed plans, priorities, benefit sources, medication/provider checks and every carrier status. Add candidate names and reviewer notes offline.','metadata'));
   }
   carrierFilter.addEventListener('change',()=>{state.filters.carrier=carrierFilter.value;render();});productFilter.addEventListener('change',()=>{state.filters.business=productFilter.value;render();});
   const targets=[...priorityKeys.map(k=>form.elements['weight_'+k]),form.elements.special_needs];for(const target of targets)target.addEventListener('change',render);
-  render();return {updateCoverage(id,checks){state.coverage.set(id,checks);const p=plans.find(p=>p.id===id);if(p)paintCoverage(p);},destroy(){observer?.disconnect();for(const target of targets)target.removeEventListener('change',render);}};
+  render();return {updateCoverage(id,checks){state.coverage.set(id,checks);const p=plans.find(p=>p.id===id);if(p)paintCoverage(p);},updateDocuments(id,result){const index=plans.findIndex(p=>p.id===id);const live=data.plans.find(p=>p.id===id);if(index<0||!live||result.carrier!==live.carrier||result.official_id!==live.official_id||result.year!==live.year||result.state!==live.state||result.zip!==data.location.zip||result.county!==data.location.county)throw new Error('PDF response did not match this plan and location.');live.document_data=result;live.review_sources={...live.review_sources,...result.review_sources};Object.assign(plans[index],comparisonPlans([live],options.inventory || {plans:[]})[0]);render();},destroy(){destroyed=true;observer?.disconnect();for(const target of targets)target.removeEventListener('change',render);}};
 }

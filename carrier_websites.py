@@ -208,7 +208,7 @@ def apply_aetna_prices(plans, rows, products, year):
         shopping_benefits(record, float(match[1].replace(',', '')) if match else None)
 
 
-def aetna_plans(loc):
+def aetna_session(loc):
     opener = client()
     base = 'https://enrollmedicare.aetna.com'
     page = '/s/shop?' + urlencode({'PlanYear': loc['year'], 'ZipCode': loc['zip'], 'CountyFIPS': loc['county'], 'step': 'PlanList'})
@@ -245,6 +245,11 @@ def aetna_plans(loc):
         if value.get('status') is not True:
             raise ShoppingError('response_changed', 'Aetna’s public shopping response changed.')
         return value
+    return invoke, base + page, inputs, effective
+
+
+def aetna_plans(loc):
+    invoke, source, inputs, effective = aetna_session(loc)
     result = invoke('getEligibleProd', {'PlanYear': str(loc['year']), 'effectiveDate': effective, 'userInputs': inputs},
                     {'effectiveDate': effective, 'filters': '', 'includeFilterAttrValues': True})
     if result.get('status') is not True or not isinstance(result.get('result', {}).get('IpResult'), list):
@@ -257,7 +262,7 @@ def aetna_plans(loc):
             continue
         if p.get('Family') not in ('MA', 'MAPD', 'PDP'):
             raise ShoppingError('response_changed', 'Aetna returned an unrecognized product type.')
-        output.append(plan('Aetna', p['PlanID'], p['Name'], loc, base + page,
+        output.append(plan('Aetna', p['PlanID'], p['Name'], loc, source,
                            'Part D' if p['Family'] == 'PDP' else 'Medicare Advantage',
                            special_needs='SNP' in p.get('SubType', '')))
         output[-1]['has_drug_coverage'] = p['Family'] != 'MA'
@@ -305,6 +310,9 @@ def uhc_plans(loc):
             detail = f"{base}/health-plans/details.html/{loc['zip']}/{loc['county'][2:]}/{p['planId']}/{loc['year']}"
             output.append(plan('UnitedHealthcare / AARP', identity, p['planName'], loc, detail,
                                'Part D' if p['planType'] == 'PDP' else 'Medicare Advantage', premium, bool(p.get('snpType'))))
+            output[-1]['review_sources'] = {'medication': source + ('#PDP' if p['planType'] == 'PDP' else '#MA'),
+                'provider': 'https://findcare.guest.uhc.com/guest-plan-selection/browse?deeplink=eyJsYW5ndWFnZSI6ImVuLVVTIiwibG9iIjoiTVIifQ==',
+                'pharmacy': 'https://www.aarpmedicareplans.com/health-plans/aarp-pharmacy.html#/Pharmacy-Search-English'}
             if p['planType'] in ('MA', 'MAPD', 'PDP'):
                 output[-1]['has_drug_coverage'] = p['planType'] != 'MA'
     return output

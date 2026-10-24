@@ -50,15 +50,26 @@ async function search(chosenCounty=''){
     if(signal.aborted)return;
     const plans=comparisonPlans(data.plans,inventory);
     const comparisonContainer=node('section');output.append(comparisonContainer);
-    comparison=websiteComparison(comparisonContainer,data,plans,context,form);
-    output.append(node('h3','Carrier search status'));
+    comparison=websiteComparison(comparisonContainer,data,plans,context,form,{inventory,loadDocuments:async(plan,refresh=false)=>{
+      const query=new URLSearchParams({carrier:plan.carrier,plan_id:plan.official_id,zip:data.location.zip,county:data.location.county,year:data.location.year});
+      if(refresh)query.set('refresh','1');
+      const response=await fetch('/api/plan-documents?'+query,{signal,credentials:'same-origin'});const documents=await response.json();if(signal.aborted)return;
+      if(!response.ok)throw new Error(documents.error || 'Official PDF pull unavailable.');
+      comparison.updateDocuments(plan.id,documents);
+      const live=data.plans.find(p=>p.id===plan.id);
+      if(context.medications.length||context.providers.length)await evaluateWebsiteCoverage([live],context,signal,(p,checks)=>{if(!signal.aborted)comparison?.updateCoverage(p.id,checks);});
+    }});
+    const carrierStatus=node('details');
+    const attention=data.carriers.filter(c=>!['success','included_under_healthspring'].includes(c.status)).length;
+    carrierStatus.append(node('summary','Carrier search status'+(attention?' · '+attention+' need attention':'')));
+    carrierStatus.open=!data.plans.length;
     const statuses=node('ul');
     for(const c of data.carriers){const item=node('li');item.append(node('strong',`${c.carrier}: ${c.status.replaceAll('_',' ')}`),node('p',c.message));
       if(c.source_checked_at)item.append(node('p',`Website checked: ${new Date(c.source_checked_at).toLocaleString()}`));
       item.append(node('p',c.checked_at?`Plans checked: ${new Date(c.checked_at).toLocaleString()}`:'Plans checked: not verified'));
       link(item,c.source_url,'Carrier website');statuses.append(item);
     }
-    output.append(statuses);
+    carrierStatus.append(statuses);output.append(carrierStatus);
     if(context.medications.length || context.providers.length){
       output.append(node('p','Open plan details for medication, provider and source information. “Not checked” does not mean “not covered.”'));
       await evaluateWebsiteCoverage(data.plans,context,signal,(plan,checks)=>{if(!signal.aborted)comparison?.updateCoverage(plan.id,checks);});

@@ -42,13 +42,13 @@
     {
       "name": "UnitedHealthcare / AARP",
       "phase": "Partially connected",
-      "scope": "Medicare products first; other lines pending",
+      "scope": "Public 2027 Medicare shopping and official PDF pulls \u00b7 local Mac backend",
       "availability": "Official ZIP/county shopping source found; not imported.",
-      "benefits": "Uploaded 2027 FL Plan Highlights reviewed for H1045-059-000. Not imported; Summary of Benefits/Evidence of Coverage still needed.",
-      "medications": "Not imported. Automated checks in combined public ZIP results are not yet connected.",
-      "providers": "Not connected. Automated checks in combined public ZIP results are not yet connected.",
+      "benefits": "Public premiums and supported shopping values plus on-demand, plan-bound SB/EOC amounts with page citations. Explicit compatible periods only; unsupported or conflicting amounts stay unverified.",
+      "medications": "Plan-catalog formulary PDF pulls provide partial name/ingredient candidates, tiers, source flags and physical PDF pages. Exact prescription equivalence and pharmacy quotes require review.",
+      "providers": "Plan-specific provider PDF and online directory links are available for manual review. Automated live participation checks are not connected; dated PDFs are not current confirmations.",
       "connection": "Third-party API listing found; endpoint unavailable from this environment. Linked UHC documentation displayed \u201cComing soon\u201d to project owner. No working integration verified. Public shopping: ZIP/county/year MA and PDP lists tested locally; 16 plans for 28202 in 2027. Medigap quotes are not retrieved. Website search changes are local; no private backend is deployed.",
-      "next_step": "Research paused at project owner\u2019s request while Molina is investigated.",
+      "next_step": "Validate more plan/state document layouts and expand exact live provider/pharmacy checks where a supported public request can be verified. Continue using the free local Mac backend.",
       "links": [
         {
           "label": "Official Medicare plan website",
@@ -156,14 +156,14 @@
     },
     {
       "name": "Aetna",
-      "phase": "Research",
-      "scope": "Public Medicare shopping local pilot \u00b7 production API review separate",
+      "phase": "Partially connected",
+      "scope": "Public 2027 Medicare shopping and official PDF pulls \u00b7 local Mac backend",
       "availability": "Nine public 2027 plans retrieved for test ZIP 28202 / Mecklenburg. No Aetna inventory imported into the static comparison dataset.",
-      "benefits": "Public premiums before Extra Help adjustments and explicit in-network medical maximums retrieved by exact product/year. Dental, OTC and other comparison fields remain unverified until sourced.",
-      "medications": "Not imported. Formulary API availability and access remain unverified. Automated checks in combined public ZIP results are not yet connected.",
-      "providers": "Not connected. Aetna catalog lists Commercial and Medicare directory resources under /v1/providerdirectorydata/. Automated checks in combined public ZIP results are not yet connected.",
+      "benefits": "Public premiums and supported shopping values plus on-demand, plan-bound SB/EOC amounts with page citations. Explicit compatible periods only; unsupported or conflicting amounts stay unverified.",
+      "medications": "Plan-catalog formulary PDF pulls provide partial name/ingredient candidates, tiers, source flags and physical PDF pages. Exact prescription equivalence and pharmacy quotes require review.",
+      "providers": "Plan-specific provider PDF and online directory links are available for manual review. Automated live participation checks are not connected; dated PDFs are not current confirmations.",
       "connection": "Production API access ticket submitted by the project owner. Aetna will review in 2\u20134 days, per the owner\u2019s update. Submitted October 14, 2026. Access has not been approved or tested. The provided /v1/providerdirectory/ example is a 2020 Medicaid record; it does not verify 2027 Medicare coverage. Public shopping: anonymous ZIP/county/year plan retrieval tested locally; nine plans for 28202 / Mecklenburg in 2027. No portal credentials used. Website search changes are local; no private backend is deployed. Public PlanList/pricing tested for 28262 / Mecklenburg / 2027: nine plans with premiums. No authenticated portal session used.",
-      "next_step": "Deploy an access-controlled private backend and validate additional configured-state ZIPs. Provider/medication website searches remain deferred; API approval remains separate.",
+      "next_step": "Validate more plan/state document layouts and expand exact live provider/pharmacy checks where a supported public request can be verified. Continue using the free local Mac backend.",
       "links": [
         {
           "label": "Aetna Developer Portal",

@@ -399,3 +399,51 @@ Validation: 45 Python tests; all Node checks including
 another website request, plan details, special-needs visibility, and the five-sheet
 Excel download. The Mac copy must be updated from GitHub and restarted to pick up
 these features; an already extracted ZIP does not update itself.
+
+
+### Aetna and UHC official plan document pulls
+
+`/api/plan-documents` accepts carrier, exact public plan ID, ZIP, county FIPS and
+year. It resolves ZIP/county within the existing target states, verifies that the
+carrier actually returned that plan for the location/year, and reads its public
+plan document catalog. Aetna uses the observed anonymous `getPlanDocuments` action;
+UHC uses the observed plan-detail document catalog. No portal credentials, patient
+identifiers, or submitted medication lists are involved in document retrieval.
+
+Search all offers a per-plan **Pull official PDFs** action and a bulk action for
+displayed Aetna/UHC plans. It downloads Summary of Benefits, Evidence of Coverage
+and formulary PDFs when available. Other documents (provider directory, vendor
+information, enrollment, highlights, ANOC, star ratings, prior authorization, step
+therapy and deletions) remain linked with their source dates. Large provider
+PDFs are not automatically indexed or treated as current network confirmations.
+Online provider/pharmacy tools remain available for manual carrier-site review.
+
+Downloaded PDFs, extracted text, timestamps, page counts and SHA-256 digests stay
+in ignored `.local-cache/plan-documents/`. Shared URLs reuse the local cache for
+24 hours; per-plan **Refresh official PDFs** forces another download. Only official
+HTTPS document paths and bounded PDFs are accepted. PDFs require a matching year;
+benefit PDFs require matching CMS identity and cover name. Ambiguous multi-plan
+covers, mismatches and conflicting amounts are flagged rather than scored. A shared
+formulary's applicability comes from the verified plan's own carrier catalog.
+
+Only explicit compatible amounts/periods enter ranking. The UHC NC-15 example
+H5253-117-000 in ZIP 28613 / Catawba returned an annual $1,500 dental maximum from
+its EOC, $25 quarterly OTC credit, $35 specialist copay, and a modeled $2,750 7-day
+hospital stay from its SB. Its $150 eyewear allowance is every two years; it is
+not scored as $150/year. Its hearing allowance is not an Advanced hearing-aid copay.
+Aetna H5521-348 in ZIP 28262 also returned matching SB/EOC/formulary documents and
+source-cited dental, vision and specialist amounts. These are sample validations,
+not evidence that every plan/state's PDF layout has been supported.
+
+Formulary extraction is partial and retains source page, tier and flags. Ingredient
+text can find candidates across differing carrier descriptions, but does not establish
+exact product/strength/form equivalence, exclusion, or pharmacy cost. New PDF values
+and candidate checks update plan details and the five-sheet Excel export. Document
+and shopping dates stay separate. Dated directories never become live network claims.
+
+The Mac launcher installs pinned `pypdf` from `requirements-local.txt` into an
+app-local Python environment when necessary. It leaves system Python unchanged
+and requires no paid service. The source PDF test runs used pypdf 6.21.2. Validation
+includes unit tests for plan/year/location binding, PDF URL restrictions, benefit
+periods, conflict rejection, wrapped formulary rows, and isolated launcher setup,
+plus a browser test of document pulls and comparison/medication updates.

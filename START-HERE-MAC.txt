@@ -12,7 +12,7 @@ An internet connection is required to search public carrier websites.
    you want to keep it, such as your Documents folder. Keep its files together.
 
 3. Double-click "Start Plan Finder.command" inside that extracted folder.
-   The first launch downloads the search software and Chromium browser.
+   The first launch sets up a free PDF reader, the search software, and Chromium.
    This is free and can take a few minutes. Later launches reuse those files.
 
 4. Your browser opens http://127.0.0.1:8765/dashboard/
@@ -41,3 +41,12 @@ needed. Medicare member-plan import is not connected.
 Public website plan search support differs by carrier. Existing medication and
 provider checks are reused where an exact plan mapping exists; unconnected checks
 remain explicit. A missing result never establishes absence of plans or coverage.
+
+READING OFFICIAL PLAN DOCUMENTS
+After Search all finishes, open a plan's View details and choose Pull official
+PDFs, or use the button to pull documents for all displayed Aetna/UHC plans.
+The first pull can take a minute or more. Verified amounts update the comparison
+and Excel export. Shared files are cached in .local-cache/plan-documents.
+Refresh official PDFs checks for a fresh copy; otherwise cached files are reused
+for up to 24 hours. Source dates remain visible. A pharmacy quote and current
+provider participation are not established by reading these PDFs.
