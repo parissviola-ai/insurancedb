@@ -140,7 +140,7 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header('Content-Type', mime + '; charset=utf-8')
         self.send_header('Content-Length', str(len(body)))
         self.send_header('Cache-Control','no-store')
-        self.send_header('Content-Security-Policy', "default-src 'self'; base-uri 'none'; frame-ancestors 'none'")
+        self.send_header('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://fhir.devoted.com https://data.healthspring.healthlx.com:8003; base-uri 'none'; frame-ancestors 'none'")
         self.end_headers()
         self.wfile.write(body)
 

@@ -1,0 +1,43 @@
+PLAN FINDER — RUN ON YOUR MAC
+
+No paid hosting, subscription, GitHub login, or carrier portal password is needed.
+An internet connection is required to search public carrier websites.
+
+1. Install these free tools if they are not already on your Mac:
+   Python 3.12 or newer: https://www.python.org/downloads/macos/
+   Node.js, current LTS: https://nodejs.org/en/download
+   Use their Mac installers. Reopen Terminal after installation.
+
+2. Double-click the ZIP to extract it. Move the Plan Finder folder somewhere
+   you want to keep it, such as your Documents folder. Keep its files together.
+
+3. Double-click "Start Plan Finder.command" inside that extracted folder.
+   The first launch downloads the search software and Chromium browser.
+   This is free and can take a few minutes. Later launches reuse those files.
+
+4. Your browser opens http://127.0.0.1:8765/dashboard/
+   Use this local dashboard for "Search all carrier websites".
+   The GitHub Pages copy is a separate static site and does not connect to this
+   local backend. You do not need to open GitHub to use the local copy.
+
+5. Keep the Terminal window open while using the dashboard. To stop it,
+   click the Terminal window and press Control+C. Reopen the launcher next time.
+
+If macOS blocks the launcher, try Control-click > Open. If it is still blocked,
+open Terminal, type "cd " (including the space), drag the extracted Plan Finder
+folder into Terminal and press Return. Then run:
+
+   bash "Start Plan Finder.command"
+
+The launcher explains missing Python/Node installations and download failures.
+If the browser does not open, paste the local address from step 4 into Safari,
+Chrome, or your preferred browser.
+
+This copy listens only on your own computer. It does not make your Mac a public
+website and other visitors cannot use it remotely. Mac sleep or stopping the
+launcher interrupts searches. No patient names, birthdates, or Medicare IDs are
+needed. Medicare member-plan import is not connected.
+
+Public website plan search support differs by carrier. Existing medication and
+provider checks are reused where an exact plan mapping exists; unconnected checks
+remain explicit. A missing result never establishes absence of plans or coverage.

@@ -335,3 +335,18 @@ identifiers, before attaching any current plan or network claim.
 
 Official references: https://bluebutton.cms.gov/api-documentation/authorization/
 and https://bluebutton.cms.gov/production-access/ .
+
+
+### Free local Mac launcher
+
+See `START-HERE-MAC.txt`. With Python 3.12+ and Node.js 20+ installed, double-click
+`Start Plan Finder.command`. `run_local.py` installs the pinned npm dependency and
+Chromium on first use, then opens `http://127.0.0.1:8765/dashboard/`. Downloads stay
+in ignored `node_modules/` and `.local-cache/` folders inside the application.
+The server binds only to loopback; keep Terminal open and press Control+C to stop.
+No hosted account, portal credentials or subscription are needed. The local copy
+and the GitHub Pages copy are separate; use the local URL for website searches.
+`python3 run_local.py --check` validates prerequisite tools without downloading or
+starting a server. `--no-browser` suppresses browser opening. The local Content
+Security Policy explicitly allows only the existing external provider API origins
+needed by the dashboard's connected checks.
