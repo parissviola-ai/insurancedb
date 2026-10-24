@@ -6,6 +6,72 @@ PLAN={'carrier':'UnitedHealthcare / AARP','official_id':'H1234-001-000','name':'
 
 
 class PlanDocumentTests(unittest.TestCase):
+    def setUp(self):
+        docs._snapshots.clear()
+
+    def test_recent_search_reuses_validated_plan_and_location(self):
+        loc={'zip':'28613','county':'37035','county_name':'Catawba','state':'NC','year':2027}
+        plan={**PLAN,**loc}
+        docs.remember_search(loc,[plan])
+        with patch.object(docs.carriers,'locations') as geo,patch.object(docs.carriers,'uhc_plans') as plans,patch.object(docs,'document_catalog',return_value=[{'kind':'stars','label':'Stars','url':'https://www.aarpmedicareplans.com/alphadog/stars'}]):
+            result=docs.lookup({'carrier':plan['carrier'],'plan_id':plan['official_id'],'zip':loc['zip'],'county':loc['county'],'year':'2027'})
+        geo.assert_not_called();plans.assert_not_called()
+        self.assertEqual(result['official_id'],plan['official_id'])
+        self.assertEqual(result['county'],'37035')
+        self.assertIsNone(docs.searched_plan(plan['carrier'],plan['official_id'],'28262','37035','2027'))
+        self.assertIsNone(docs.searched_plan(plan['carrier'],plan['official_id'],'28613','37119','2027'))
+        self.assertIsNone(docs.searched_plan(plan['carrier'],plan['official_id'],'28613','37035','2026'))
+        self.assertIsNone(docs.searched_plan('Aetna',plan['official_id'],'28613','37035','2027'))
+        self.assertIsNone(docs.searched_plan(plan['carrier'],'H9999-001-000','28613','37035','2027'))
+
+    def test_search_snapshot_expires_and_cannot_be_mutated_by_reader(self):
+        loc={'zip':'28613','county':'37035','county_name':'Catawba','state':'NC','year':2027}
+        plan={**PLAN,**loc}
+        with patch.object(docs.time,'monotonic',return_value=100):
+            docs.remember_search(loc,[plan])
+            saved=docs.searched_plan(plan['carrier'],plan['official_id'],'28613','37035','2027')
+            saved[1]['name']='Changed'
+            self.assertEqual(docs.searched_plan(plan['carrier'],plan['official_id'],'28613','37035','2027')[1]['name'],plan['name'])
+        with patch.object(docs.time,'monotonic',return_value=401):
+            self.assertIsNone(docs.searched_plan(plan['carrier'],plan['official_id'],'28613','37035','2027'))
+        docs.remember_search(loc,[{**plan,'county':'37119'}])
+        self.assertFalse(docs._snapshots)
+
+    def test_new_empty_search_clears_older_offering_snapshot(self):
+        loc={'zip':'28613','county':'37035','county_name':'Catawba','state':'NC','year':2027}
+        docs.remember_search(loc,[{**PLAN,**loc}])
+        self.assertTrue(docs.searched_plan(PLAN['carrier'],PLAN['official_id'],'28613','37035','2027'))
+        docs.forget_search(loc);docs.remember_search(loc,[])
+        self.assertIsNone(docs.searched_plan(PLAN['carrier'],PLAN['official_id'],'28613','37035','2027'))
+
+    def test_transient_errors_retry_and_sanitized_diagnostics_identify_stage(self):
+        from urllib.error import HTTPError,URLError
+        from unittest.mock import Mock
+        action=Mock(side_effect=[TimeoutError(),URLError('private diagnostic not for display'),{'ok':True}])
+        with patch.object(docs.time,'sleep') as delay:
+            self.assertEqual(docs.request_step('Aetna document catalog',action),{'ok':True})
+            self.assertEqual(delay.call_count,2)
+        action=Mock(side_effect=TimeoutError('secret URL'))
+        with patch.object(docs.time,'sleep'),self.assertRaises(docs.carriers.ShoppingError) as caught:
+            docs.request_step('Aetna document catalog',action)
+        self.assertIn('Aetna document catalog',caught.exception.message)
+        self.assertIn('3 attempts',caught.exception.message)
+        self.assertNotIn('secret',caught.exception.message)
+        action=Mock(side_effect=HTTPError('https://example.com/private',403,'forbidden',{},None))
+        with self.assertRaises(docs.carriers.ShoppingError) as caught:docs.request_step('Aetna document catalog',action)
+        action.assert_called_once();self.assertIn('HTTP 403',caught.exception.message)
+        self.assertNotIn('private',caught.exception.message)
+        action=Mock(side_effect=[HTTPError('https://example.com',429,'busy',{'Retry-After':'2'},None),{'ok':True}])
+        with patch.object(docs.time,'sleep') as delay:
+            self.assertEqual(docs.request_step('Aetna document catalog',action),{'ok':True})
+            delay.assert_called_once_with(2)
+        action=Mock(side_effect=HTTPError('https://example.com',429,'busy',{'Retry-After':'60'},None))
+        with self.assertRaises(docs.carriers.ShoppingError):docs.request_step('Aetna document catalog',action)
+        action.assert_called_once()
+        with self.assertRaises(docs.carriers.ShoppingError) as caught:docs.request_step('HealthSpring plan availability',lambda:{}['secret'])
+        self.assertIn('KeyError',caught.exception.message)
+        self.assertNotIn('secret',caught.exception.message)
+
     def test_document_urls_are_restricted(self):
         docs.pdf_url('https://www.aarpmedicareplans.com/alphadog/fixture')
         docs.pdf_url('https://www.aetna.com/medicare/documents/individual/2027/fixture.pdf')

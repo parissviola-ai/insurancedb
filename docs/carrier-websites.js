@@ -53,7 +53,14 @@ async function search(chosenCounty=''){
     comparison=websiteComparison(comparisonContainer,data,plans,context,form,{inventory,loadDocuments:async(plan,refresh=false)=>{
       const query=new URLSearchParams({carrier:plan.carrier,plan_id:plan.official_id,zip:data.location.zip,county:data.location.county,year:data.location.year});
       if(refresh)query.set('refresh','1');
-      const response=await fetch('/api/plan-documents?'+query,{signal,credentials:'same-origin'});const documents=await response.json();if(signal.aborted)return;
+      let response,documents;
+      const waits=[500,1000,2000,4000,8000];
+      for(let attempt=0;attempt<=waits.length;attempt++){
+        if(signal.aborted)return;
+        response=await fetch('/api/plan-documents?'+query,{signal,credentials:'same-origin'});documents=await response.json();if(signal.aborted)return;
+        if(response.ok||documents.status!=='busy'||attempt===waits.length)break;
+        await new Promise(resolve=>setTimeout(resolve,waits[attempt]));
+      }
       if(!response.ok)throw new Error(documents.error || 'Official PDF pull unavailable.');
       comparison.updateDocuments(plan.id,documents);
       const live=data.plans.find(p=>p.id===plan.id);

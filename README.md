@@ -530,3 +530,33 @@ The remaining unconfirmed categories in that audit are 11 separate OTC amounts,
 13 routine ride counts and one routine eyewear allowance. These remain clearly
 identified source gaps, not zero-valued benefits. No provider selections were
 entered in that pasted search; no provider participation is inferred.
+
+Plan-document reliability (ZIP-based plan details v6): a successful public search
+seeds a five-minute in-memory validation snapshot per carrier/ZIP/county/year.
+PDF requests reuse the exact plan and validated county relationship instead of
+repeating the entire ZIP and carrier list lookup for every plan. Entries are
+copied, bounded to 48 carrier/location groups and invalidated by each newer search,
+including empty results. Standalone PDF requests still perform full verification
+when no current exact-match snapshot exists. No personal search selections or
+sessions are stored in these snapshots.
+
+ZIP lookup, availability, catalogs and document reads retry transient connection
+failures and HTTP 408/429/5xx up to three times. Short numeric Retry-After delays
+are respected; longer requested pauses stop automatic retries. Access denial,
+certificate and changed-response errors are reported without repeated requests.
+Errors identify the stage and HTTP status or exception class without exposing raw
+session URLs or unexpected exception values. Browser requests also retry a busy local PDF
+queue up to five times with bounded delays. Aetna official source links include
+the exact PlanID-year parameter supplied by the shopping result.
+The exact Aetna H5521-348 request succeeded during investigation; the Mac's original
+generic failure was not reproduced, so these changes do not assert a proven root
+cause for it. Validation covers snapshot scope/expiry/immutability/invalidation,
+bounded transient retries, phase diagnostics, real selected-plan retrieval and
+browser busy recovery with per-plan access-error display.
+
+Automatic document loading now starts with the plans shown by the current filters.
+Hidden special-needs plan documents wait until those plans are enabled; new visible
+plans load automatically after the current queue completes. Failed checks are not
+retried indefinitely by filter changes. PDF buttons wait during bulk work so manual
+clicks cannot create duplicate requests for queued plans. This reduces the default
+workload without changing carrier availability or special-needs eligibility rules.

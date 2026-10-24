@@ -167,6 +167,29 @@ class CarrierWebsiteTests(unittest.TestCase):
         r['business']='Part D';c.uhc_shopping_benefits(r,raw)
         self.assertEqual(r['shopping_metrics'],{})
 
+    def test_aetna_official_source_opens_selected_plan(self):
+        from urllib.parse import urlparse,parse_qs
+        from unittest.mock import Mock
+        invoke=Mock(return_value={'status':True,'result':{'IpResult':[{'PlanID':'H5521-348','Name':'Signature Giveback','Family':'MAPD','PlanYear':'2027','DTCValue':'Display'}]}})
+        source='https://enrollmedicare.aetna.com/s/shop?PlanYear=2027&ZipCode=28202&CountyFIPS=37119&step=PlanList'
+        with patch.object(c,'aetna_session',return_value=(invoke,source,{},'2027-01-02')):
+            row=c.aetna_plans(LOC)[0]
+        query=parse_qs(urlparse(row['source_url']).query)
+        self.assertEqual(query['PlanID'],['H5521-348-2027'])
+        self.assertEqual(query['ZipCode'],['28202'])
+        self.assertEqual(query['CountyFIPS'],['37119'])
+
+    def test_successful_carrier_search_seeds_document_validation_snapshot(self):
+        import app
+        from unittest.mock import Mock
+        plan=c.plan('Aetna','H5521-348','Fixture',LOC,'https://enrollmedicare.aetna.com')
+        data={'location':LOC,'plans':[plan],'carriers':[]}
+        handler=object.__new__(app.Handler);handler.path='/api/carrier-websites?zip=28202';handler.respond=Mock()
+        with patch.object(c,'search',return_value=data),patch.object(app.plan_documents,'remember_search') as remember:
+            handler.do_GET()
+        remember.assert_called_once_with(LOC,[plan])
+        self.assertEqual(handler.respond.call_args.args[1],'application/json')
+
     def test_uhc_exact_location_year_and_zero_premium(self):
         values={'selectedCounty':{'zipCode':'28202','stateCode':'NC','fipsStateCode':'37','fipsCountyCode':'119'},
                 'maPlansCount':1,'pdpPlansCount':0,'pdpPlans':[],

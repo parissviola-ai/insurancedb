@@ -94,7 +94,7 @@ def main():
             print(f'Port {args.port} is in use. This copy will use port {server.server_port}.', flush=True)
         url = f'http://127.0.0.1:{server.server_port}/dashboard/'
         print('Application folder: ' + str(ROOT), flush=True)
-        print('Version: ZIP-based plan details v5', flush=True)
+        print('Version: ZIP-based plan details v6', flush=True)
         print('\nPlan Finder is running on this Mac only.', flush=True)
         print('Open: ' + url, flush=True)
         print('Keep this Terminal window open. Press Control+C here to stop.\n', flush=True)

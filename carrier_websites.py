@@ -333,7 +333,7 @@ def aetna_plans(loc):
             continue
         if p.get('Family') not in ('MA', 'MAPD', 'PDP'):
             raise ShoppingError('response_changed', 'Aetna returned an unrecognized product type.')
-        output.append(plan('Aetna', p['PlanID'], p['Name'], loc, source,
+        output.append(plan('Aetna', p['PlanID'], p['Name'], loc, source+'&'+urlencode({'PlanID':p['PlanID']+'-'+str(loc['year'])}),
                            'Part D' if p['Family'] == 'PDP' else 'Medicare Advantage',
                            special_needs='SNP' in p.get('SubType', '')))
         output[-1]['has_drug_coverage'] = p['Family'] != 'MA'

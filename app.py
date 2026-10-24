@@ -116,6 +116,9 @@ class Handler(BaseHTTPRequestHandler):
                         carrier_websites.search(params) if parsed.path == '/api/carrier-websites' else
                         service_data.document_text(params.get('url','')) if parsed.path == '/api/document' else
                         devoted.lookup(params) if parsed.path == '/api/devoted' else search(params))
+                if parsed.path=='/api/carrier-websites' and data.get('location'):
+                    plan_documents.forget_search(data['location'])
+                    plan_documents.remember_search(data['location'],data.get('plans',[]))
                 self.respond(json.dumps(data).encode(), 'application/json')
             except carrier_websites.ShoppingError as error:
                 self.respond(json.dumps({'error':error.message, 'status':error.status}).encode(), 'application/json', 503)

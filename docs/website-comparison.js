@@ -124,7 +124,7 @@ export function websiteComparison(container,data,plans,context,form,options={}){
   const productLabel=node('label','Compare product type');const productFilter=node('select');productFilter.setAttribute('aria-label','Compare product type');productFilter.append(new Option('All returned products',''));
   for(const type of [...new Set(plans.map(p=>p.business))].sort())productFilter.append(new Option(type,type));productLabel.append(productFilter);controls.append(carrierLabel,productLabel);
   const comparison=node('section');const detailList=node('section');container.append(controls,comparison,detailList);
-  let destroyed=false;let bulkRunning=false;let documentProgress=null;const loading=new Set();const queued=new Set();const failures=new Map();
+  let destroyed=false;let bulkRunning=false;let documentProgress=null;const loading=new Set();const queued=new Set();const attempted=new Set();const failures=new Map();
   let observer;let ranked=[];let weights={};let coverageCells=new Map();let detailCells=new Map();let pdpCoverageCells=new Map();const openDetails=new Set();
   function paintCoverage(p){const checks=state.coverage.get(p.id),cells=coverageCells.get(p.id),details=detailCells.get(p.id);
     const pdpCell=pdpCoverageCells.get(p.id);if(pdpCell)pdpCell.textContent=summary(checks?.medications,context.medications.length);
@@ -143,24 +143,29 @@ export function websiteComparison(container,data,plans,context,form,options={}){
   }
   async function pull(p,refresh=false){
     if(destroyed||loading.has(p.id)||!options.loadDocuments)return;
-    queued.delete(p.id);loading.add(p.id);failures.delete(p.id);render();
+    attempted.add(p.id);queued.delete(p.id);loading.add(p.id);failures.delete(p.id);render();
     try{await options.loadDocuments(p,refresh);}catch(error){if(!destroyed)failures.set(p.id,error.message || 'PDF pull unavailable.');}
     finally{loading.delete(p.id);if(!destroyed)render();}
   }
   async function loadPlanDocuments(targets){
     if(destroyed||bulkRunning||!options.loadDocuments)return;
-    const queue=targets.filter(p=>supportsDocuments(p));
+    const queue=targets.filter(p=>supportsDocuments(p)&&!loading.has(p.id));
     if(!queue.length)return;
     bulkRunning=true;for(const p of queue)queued.add(p.id);documentProgress={done:0,total:queue.length};render();
     const worker=async()=>{while(queue.length&&!destroyed){const p=queue.shift();await pull(p);documentProgress.done++;if(!destroyed)render();}};
-    try{await Promise.all([worker(),worker()]);}finally{bulkRunning=false;if(!destroyed)render();}
+    try{await Promise.all([worker(),worker()]);}finally{
+      bulkRunning=false;
+      if(!destroyed){render();const pending=automaticTargets();if(pending.length)await loadPlanDocuments(pending);}
+    }
   }
+  function automaticTargets(){return ranked.map(r=>r.plan).filter(p=>supportsDocuments(p)&&!attempted.has(p.id));}
+  function changed(){render();if(!bulkRunning)void loadPlanDocuments(automaticTargets());}
   function render(){
     if(destroyed)return;
     observer?.disconnect();coverageCells=new Map();detailCells=new Map();pdpCoverageCells=new Map();comparison.replaceChildren();detailList.replaceChildren();
     weights=Object.fromEntries(priorityKeys.map(k=>[k,Number(form.elements['weight_'+k].value)]));state.filters.includeSpecial=form.elements.special_needs.checked;
     ranked=visibleRanked(plans,weights,{...state.filters,needsDrugs:context.medications.length>0});
-    comparison.append(node('p','Plan Finder · ZIP-based plan details v5','metadata'),node('h3',`${plans.length} plans returned`),node('p',`${ranked.length} shown with the current carrier, product and special-needs filters. Change priorities above to update rankings without another website search.`));
+    comparison.append(node('p','Plan Finder · ZIP-based plan details v6','metadata'),node('h3',`${plans.length} plans returned`),node('p',`${ranked.length} shown with the current carrier, product and special-needs filters. Change priorities above to update rankings without another website search.`));
     const top=ranked.filter(r=>r.score!==null && Math.abs(r.score-ranked.find(x=>x.score!==null)?.score)<0.0001);
     if(top.length)comparison.append(node('p','Top benefit match'+(top.length>1?'es (tie)':'')+': '+top.map(r=>r.plan.name).join('; '),'recommendation'));
     else comparison.append(node('p',ranked.length&&ranked.every(r=>r.plan.business==='Part D')?'Drug-only plans are compared separately below.':'No ranking available for the current priorities. Review missing amounts or change priorities.'));
@@ -180,7 +185,7 @@ export function websiteComparison(container,data,plans,context,form,options={}){
       for(const doc of p.documents){const row=node('p');link(row,({benefits:'Summary of Benefits',evidence:'Evidence of Coverage',formulary:'Formulary',provider_directory:'Provider directory',prior_authorization:'Prior Authorization Criteria',step_therapy:'Step Therapy Criteria',formulary_deletions:'Formulary deletions',changes:'Annual Notice of Changes',highlights:'Benefit highlights',stars:'Star ratings',enrollment:'Enrollment form',vendor_information:'Vendor information sheet'})[doc.kind] || doc.label || doc.kind,doc.url);row.append(node('small',doc.retrieved_at?' · PDF retrieved '+date(doc.retrieved_at):doc.source_date?' · carrier updated '+doc.source_date:' · linked from the carrier plan page'));if(doc.shared_document)row.append(node('small',' · shared plan-family document; state-dependent amounts require review'));details.append(row);}
       if(p.review_sources?.medication)link(details,p.carrier==='HealthSpring'?'Check prescriptions on HealthSpring':'Check prescriptions on carrier site',p.review_sources.medication);
       if(p.review_sources?.pharmacy){details.append(document.createTextNode(' · '));link(details,p.carrier==='HealthSpring'?'Choose pharmacy on HealthSpring':'Find a pharmacy on carrier site',p.review_sources.pharmacy);details.append(node('small',' These tools open on the carrier site. Enter drug and pharmacy choices there; exact quotes are not imported into this comparison.'));}
-      if(supportsDocuments(p)&&options.loadDocuments){const pullButton=node('button',loading.has(p.id)?'Reading official PDFs…':p.document_data?'Refresh official PDFs':'Pull official PDFs');pullButton.type='button';pullButton.disabled=loading.has(p.id);pullButton.addEventListener('click',()=>pull(p,Boolean(p.document_data)));details.append(pullButton);if(failures.has(p.id))details.append(node('p',failures.get(p.id)));if(p.document_data){details.append(node('p',p.document_data.documents.some(d=>d.identity_verified)?'Official PDFs read and cached on this computer.':'Documents linked; extraction needs review.'));if(p.document_data.issues?.length){const issues=node('details');issues.append(node('summary','Documents needing review'));for(const issue of p.document_data.issues)issues.append(node('p',issue));details.append(issues);}}}
+      if(supportsDocuments(p)&&options.loadDocuments){const pullButton=node('button',loading.has(p.id)?'Reading official PDFs…':queued.has(p.id)||(bulkRunning&&!attempted.has(p.id))?'Waiting for document check…':p.document_data?'Refresh official PDFs':'Pull official PDFs');pullButton.type='button';pullButton.disabled=bulkRunning||loading.has(p.id)||queued.has(p.id);pullButton.addEventListener('click',()=>pull(p,Boolean(p.document_data)));details.append(pullButton);if(failures.has(p.id))details.append(node('p',failures.get(p.id)));if(p.document_data){details.append(node('p',p.document_data.documents.some(d=>d.identity_verified)?'Official PDFs read and cached on this computer.':'Documents linked; extraction needs review.'));if(p.document_data.issues?.length){const issues=node('details');issues.append(node('summary','Documents needing review'));for(const issue of p.document_data.issues)issues.append(node('p',issue));details.append(issues);}}}
       if(p.benefit_notice)details.append(node('p',p.benefit_notice));
       if(p.scope_note)details.append(node('p',p.scope_note));const drugDetails=node('div'),providerDetails=node('div');details.append(node('h4','Medication review'),drugDetails,node('h4','Provider / facility review'),providerDetails);detailCells.set(p.id,{drugs:drugDetails,people:providerDetails});detailList.append(details);paintCoverage(p);
     }
@@ -195,11 +200,11 @@ export function websiteComparison(container,data,plans,context,form,options={}){
     const download=node('button','Export comparison to Excel');download.type='button';download.disabled=!ranked.length;
     download.addEventListener('click',()=>{const blob=workbook(exportSheets(state,ranked,weights));const url=URL.createObjectURL(blob);const a=node('a');a.href=url;a.download=`carrier-comparison-${data.location?.year || ''}-${data.location?.zip || ''}.xlsx`;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);});comparison.append(download,node('p','Export includes the displayed plans, priorities, benefit sources, medication/provider checks and every carrier status. Add candidate names and reviewer notes offline.','metadata'));
   }
-  carrierFilter.addEventListener('change',()=>{state.filters.carrier=carrierFilter.value;render();});productFilter.addEventListener('change',()=>{state.filters.business=productFilter.value;render();});
-  const targets=[...priorityKeys.map(k=>form.elements['weight_'+k]),form.elements.special_needs];for(const target of targets)target.addEventListener('change',render);
+  carrierFilter.addEventListener('change',()=>{state.filters.carrier=carrierFilter.value;changed();});productFilter.addEventListener('change',()=>{state.filters.business=productFilter.value;changed();});
+  const targets=[...priorityKeys.map(k=>form.elements['weight_'+k]),form.elements.special_needs];for(const target of targets)target.addEventListener('change',changed);
   render();
   // Start after returning the instance so the controller's document callback
   // can update it. Rendering a comparison always starts its own document work.
-  const documentsReady=Promise.resolve().then(()=>loadPlanDocuments(plans));
-  return {documentsReady,loadDocumentsAutomatically:()=>documentsReady,updateCoverage(id,checks){state.coverage.set(id,checks);const p=plans.find(p=>p.id===id);if(p)paintCoverage(p);},updateDocuments(id,result){const index=plans.findIndex(p=>p.id===id);const live=data.plans.find(p=>p.id===id);if(index<0||!live||result.carrier!==live.carrier||result.official_id!==live.official_id||result.year!==live.year||result.state!==live.state||result.zip!==data.location.zip||result.county!==data.location.county)throw new Error('PDF response did not match this plan and location.');live.document_data=result;live.review_sources={...live.review_sources,...result.review_sources};Object.assign(plans[index],comparisonPlans([live],options.inventory || {plans:[]})[0]);render();},destroy(){destroyed=true;observer?.disconnect();for(const target of targets)target.removeEventListener('change',render);}};
+  const documentsReady=Promise.resolve().then(()=>loadPlanDocuments(automaticTargets()));
+  return {documentsReady,loadDocumentsAutomatically:()=>documentsReady,updateCoverage(id,checks){state.coverage.set(id,checks);const p=plans.find(p=>p.id===id);if(p)paintCoverage(p);},updateDocuments(id,result){const index=plans.findIndex(p=>p.id===id);const live=data.plans.find(p=>p.id===id);if(index<0||!live||result.carrier!==live.carrier||result.official_id!==live.official_id||result.year!==live.year||result.state!==live.state||result.zip!==data.location.zip||result.county!==data.location.county)throw new Error('PDF response did not match this plan and location.');live.document_data=result;live.review_sources={...live.review_sources,...result.review_sources};Object.assign(plans[index],comparisonPlans([live],options.inventory || {plans:[]})[0]);render();},destroy(){destroyed=true;observer?.disconnect();for(const target of targets)target.removeEventListener('change',changed);}};
 }

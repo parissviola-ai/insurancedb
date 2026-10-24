@@ -1,5 +1,9 @@
 """Plan-bound public PDF retrieval. Caches stay on this computer, outside Git."""
 import hashlib
+import copy
+import ssl
+from collections import OrderedDict
+from urllib.error import HTTPError, URLError
 import io
 import json
 import logging
@@ -16,6 +20,82 @@ CACHE = ROOT / '.local-cache' / 'plan-documents'
 _slots = threading.BoundedSemaphore(2)
 _locks = {}
 _guard = threading.Lock()
+_snapshots = OrderedDict()
+_snapshot_guard = threading.Lock()
+SNAPSHOT_TTL = 300
+
+
+def remember_search(location, plans):
+    """Only server-verified public facts; never medications or user selections."""
+    if not all(key in location for key in ('zip','county','state','year')):return
+    groups = {}
+    for plan in plans:
+        if plan.get('carrier') not in ('Aetna','UnitedHealthcare / AARP','HealthSpring'):continue
+        if any(plan.get(key)!=location.get(key) for key in ('zip','county','state','year')):continue
+        groups.setdefault(plan['carrier'],{})[plan['official_id']]=copy.deepcopy(plan)
+    with _snapshot_guard:
+        for name, group in groups.items():
+            key=(name,location['zip'],location['county'],str(location['year']))
+            _snapshots[key]=(time.monotonic(),copy.deepcopy(location),group)
+            _snapshots.move_to_end(key)
+        while len(_snapshots)>48:_snapshots.popitem(last=False)
+
+
+def forget_search(location):
+    """A newer search must not leave withdrawn or failed carrier results cached."""
+    with _snapshot_guard:
+        for key in list(_snapshots):
+            if key[1:]==(location.get('zip'),location.get('county'),str(location.get('year'))):
+                _snapshots.pop(key,None)
+
+
+def searched_plan(name, identity, zip_code, county, year):
+    key=(name,zip_code,county,str(year))
+    with _snapshot_guard:
+        saved=_snapshots.get(key)
+        if saved is None:return None
+        if time.monotonic()-saved[0]>=SNAPSHOT_TTL:
+            _snapshots.pop(key,None);return None
+        if identity not in saved[2]:return None
+        return copy.deepcopy((saved[1],saved[2][identity]))
+
+
+def request_step(phase, action, attempts=3):
+    """Retry transient failures only; diagnostics never include URLs or sessions."""
+    for attempt in range(attempts):
+        delay=0.5*(attempt+1)
+        try:return action()
+        except HTTPError as error:
+            retry=error.code in (408,429,500,502,503,504)
+            status='sign_in_required' if error.code==401 else 'access_blocked' if error.code==403 else 'unavailable'
+            message=f'{phase}: carrier returned HTTP {error.code}.'
+            retry_after=(error.headers or {}).get('Retry-After','')
+            if retry and re.fullmatch(r'[0-9]+',str(retry_after)):
+                if int(retry_after)>30:
+                    retry=False;message+=' Carrier requests a longer pause before retrying.'
+                else:delay=max(delay,int(retry_after))
+        except URLError as error:
+            if isinstance(error.reason,ssl.SSLCertVerificationError):
+                raise carriers.ShoppingError('certificate_error',phase+': HTTPS certificate verification failed. Run the Python installer’s Install Certificates.command on your Mac, then restart Plan Finder.') from None
+            retry=True;status='unavailable';message=phase+': could not connect to the carrier service.'
+        except (TimeoutError,ConnectionError):
+            retry=True;status='unavailable';message=phase+': connection timed out or was interrupted.'
+        except carriers.ShoppingError as error:
+            retry=error.status in ('unavailable','busy')
+            status=error.status;message=phase+': '+error.message
+        except PermissionError:
+            raise carriers.ShoppingError('cache_error',phase+': the application folder or local document cache could not be accessed. Check folder permissions.') from None
+        except json.JSONDecodeError:
+            raise carriers.ShoppingError('response_changed',phase+': the carrier response was not readable JSON. No benefit amounts inferred.') from None
+        except (ValueError,RuntimeError) as error:
+            raise carriers.ShoppingError('response_changed',phase+': '+str(error)) from None
+        except Exception as error:
+            raise carriers.ShoppingError('response_changed',phase+': unexpected response or processing error ('+type(error).__name__+'). No benefit amounts inferred.') from None
+        if not retry or attempt+1==attempts:
+            raise carriers.ShoppingError(status,message+(' Failed after '+str(attempts)+' attempts.' if retry else '')) from None
+        time.sleep(delay)
+
+
 DOC_TYPES = {'1':'enrollment','2':'evidence','3':'benefits','1027':'provider_directory',
              '6014':'changes','6002':'highlights','1043':'stars','2019':'prior_authorization',
              '2020':'step_therapy','2021':'formulary_deletions'}
@@ -366,14 +446,20 @@ def lookup(params):
         raise ValueError('Choose a supported carrier, exact plan ID and year')
     if not _slots.acquire(blocking=False):raise carriers.ShoppingError('busy','PDF downloads are busy. Retry shortly.')
     try:
-        geo=carriers.locations(zip_code)
-        selected=next((c for c in geo['counties'] if c['code']==county),None)
-        if not selected:raise ValueError('ZIP/county relationship could not be verified')
-        loc={'zip':zip_code,'county':county,'county_name':selected['name'],'state':selected['state'],'year':int(year)}
-        plans={'Aetna':carriers.aetna_plans,'UnitedHealthcare / AARP':carriers.uhc_plans,'HealthSpring':carriers.healthspring_plans}[name](loc)
-        plan=next((p for p in plans if p['official_id']==identity),None)
-        if not plan:raise ValueError('This exact plan was not returned for the selected location and year')
-        docs=document_catalog(plan,loc)
+        cached=searched_plan(name,identity,zip_code,county,year)
+        if cached:
+            loc,plan=cached
+        else:
+            geo=request_step('ZIP/county verification',lambda:carriers.locations(zip_code))
+            selected=next((c for c in geo['counties'] if c['code']==county),None)
+            if not selected:raise ValueError('ZIP/county relationship could not be verified')
+            loc={'zip':zip_code,'county':county,'county_name':selected['name'],'state':selected['state'],'year':int(year)}
+            connector={'Aetna':carriers.aetna_plans,'UnitedHealthcare / AARP':carriers.uhc_plans,'HealthSpring':carriers.healthspring_plans}[name]
+            plans=request_step(name+' plan availability',lambda:connector(loc))
+            plan=next((p for p in plans if p['official_id']==identity),None)
+            if not plan:raise ValueError('This exact plan was not returned for the selected location and year')
+            remember_search(loc,plans)
+        docs=request_step(name+' document catalog',lambda:document_catalog(plan,loc))
         if not docs:raise ValueError('No plan-specific documents were returned by the carrier.')
         result={**loc,'carrier':name,'official_id':identity,'documents':docs,'benefit_metrics':{},'benefit_disclosures':{},'benefit_review_notes':{},'benefit_unavailable':{},'formularies':{},'drug_details':[],'issues':[],'review_sources':dict(plan.get('review_sources',{}))}
         directory=next((d for d in docs if d['kind']=='provider_directory'),None)
@@ -382,7 +468,7 @@ def lookup(params):
             doc=next((d for d in docs if d['kind']==kind),None)
             if not doc:continue
             try:
-                text,metadata=read_pdf(doc['url'],params.get('refresh')=='1')
+                text,metadata=request_step(name+' '+kind+' PDF download/cache',lambda:read_pdf(doc['url'],params.get('refresh')=='1'))
                 doc.update(metadata);verified_text(text,plan,kind,doc['url']);doc['identity_verified']=True
                 if kind=='formulary':
                     result['formularies'][doc['url']]={**metadata,'rows':formulary_rows(text,name),'partial':True}
@@ -410,7 +496,7 @@ def lookup(params):
                     result['benefit_metrics'].update(metrics);result['benefit_review_notes'].update(notes);result['benefit_unavailable'].update(unavailable)
             except Exception as error:
                 doc['identity_verified']=False
-                result['issues'].append(doc['label']+': '+(str(error) if isinstance(error,(ValueError,RuntimeError)) else 'Download or extraction unavailable.'))
+                result['issues'].append(doc['label']+': '+(error.message if isinstance(error,carriers.ShoppingError) else str(error) if isinstance(error,(ValueError,RuntimeError)) else 'Download or extraction unavailable ('+type(error).__name__+').'))
                 if kind=='benefits' and plan.get('business')!='Part D':break  # A mismatched SB must not attach a different plan's companion files.
         reviewed=[doc for doc in docs if doc['kind'] in ('benefits','evidence') and doc.get('identity_verified')]
         if plan.get('business','Medicare Advantage')=='Medicare Advantage' and reviewed and 'otc' not in result['benefit_metrics'] and 'otc' not in result['benefit_unavailable']:
