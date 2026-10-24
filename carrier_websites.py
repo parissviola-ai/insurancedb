@@ -173,7 +173,7 @@ def healthspring_plans(loc):
         # Annual plan premium is the explicit combined premium, not estimated drug spend.
         annual = p.get('AnnualPlanPremium')
         premium = round(annual / 12, 2) if isinstance(annual, (int, float)) and annual >= 0 else None
-        business = 'Part D' if p.get('PlanSubType') == 'PDP' else 'Medicare Advantage'
+        business = 'Part D' if p.get('PlanSubType') == 'PDP' or p['ContractID'].startswith('S') else 'Medicare Advantage'
         output.append(plan('HealthSpring', identity, p['PlanName'], loc, source, business, premium,
                            bool(p.get('PlanSNPCategories'))))
         if isinstance(p.get('HasDrugCoverage'), bool):

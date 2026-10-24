@@ -82,7 +82,7 @@ export function exportSheets(state,ranked,weights){
   for(const {plan:p,score,reason} of ranked){
     const checks=state.coverage.get(p.id);
     rows.push([p.carrier,p.name,p.official_id,p.year,p.business,score===null?'Unranked':Math.round(score),score===null?reason:'Relative benefit match only',
-      ...benefits.map(([k])=>p.benefit_metrics[k]?.amount ?? p.benefit_unavailable[k] ?? 'Unverified'),p.benefit_metrics.otc?p.benefit_metrics.otc.amount*4:'Unverified',
+      ...benefits.map(([k])=>p.business==='Part D'&&k!=='premium'?'Not applicable — drug-only plan':p.benefit_metrics[k]?.amount ?? p.benefit_unavailable[k] ?? 'Unverified'),p.benefit_metrics.otc?p.benefit_metrics.otc.amount*4:'Unverified',
       summary(checks?.medications,state.context.medications.length),summary(checks?.providers,state.context.providers.length),p.source_url,p.checked_at,p.documents.map(d=>d.kind+': '+d.url+' (retrieved '+(d.retrieved_at || 'unverified')+')').join('\n'),'','']);
     for(const [key,label] of benefits){const m=p.benefit_metrics[key];sources.push([p.carrier,p.name,p.official_id,label,m?.amount ?? 'Unverified',m?.period || '',m?.notes || p.benefit_unavailable[key] || p.benefit_review_notes[key] || 'Unverified',m?.source_url || '',m?.origin || '',m?.source_retrieved_at || '']);}
     for(const [kind,selections] of [['medications',state.context.medications],['providers',state.context.providers]]){
@@ -98,7 +98,7 @@ export function exportSheets(state,ranked,weights){
 function node(tag,text,cls){const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n;}
 function link(parent,text,url){try{const u=new URL(url);if(u.protocol!=='https:'||u.username||u.password)return;const a=node('a',text);a.href=u.href;a.target='_blank';a.rel='noopener noreferrer';parent.append(a);}catch{}}
 function metricValue(key,m){return key==='transportation'?m.amount+' one-way rides':money(m.amount);}
-function metricCell(parent,plan,key,documentStatus){const m=plan.benefit_metrics[key];
+function metricCell(parent,plan,key,documentStatus){if(plan.business==='Part D'&&key!=='premium'){parent.append(node('span','Not applicable — drug-only plan'));return;}const m=plan.benefit_metrics[key];
   if(m){link(parent,metricValue(key,m),m.source_url);if(key==='otc')parent.append(node('small',money(m.amount*4)+' annual equivalent; four quarters, no rollover assumed.'));if(m.notes)parent.append(node('small',m.notes));}
   else parent.append(node('span',plan.benefit_unavailable[key] || documentStatus || 'Unverified'));
 }

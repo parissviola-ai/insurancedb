@@ -144,6 +144,19 @@ def parse_benefits(text,url):
         amount=float(match.group(1).replace(',','')) if override is None else override
         metrics[key]={'amount':amount,'period':period,'notes':description,'source_url':url+'#page='+str(text[:match.start()].count('\f')+1)}
     amount=r'([0-9][0-9,]*(?:\.[0-9]{1,2})?)'
+    # EOC explicitly distinguishes the network maximum from the combined maximum.
+    moop=re.search(r'(?:Your\s+)?in-network maximum out-of-pocket amount\s*\(MOOP\)\s+is\s+\$'+amount,text,re.I)
+    if not moop:
+        # SB table columns must establish network-first order. Never use a
+        # combined or out-of-network amount as the network-only maximum.
+        for match in re.finditer(r'Maximum out-of-pocket amount\s*\(does\s*\$'+amount,text,re.I):
+            before=text[max(0,match.start()-1500):match.start()]
+            columns=list(re.finditer(r'In-network[ \t]+Out-of-network',before,re.I))
+            after=text[match.end():match.end()+450]
+            network_only=re.search(r'received from\s+network providers',after,re.I) and not re.search(r'out-of-network|combined|any provider',before[-250:]+after,re.I)
+            if (columns or network_only) and re.search(r'each\s+year',after,re.I):
+                moop=match;break
+    add('moop',moop,'year','In-network annual medical maximum. Part D, premiums and excluded services are separate; confirm source conditions.')
     add('dental',re.search(r'Annual dental maximum:\s*\$'+amount,text,re.I),
         'year','Annual dental maximum/allowance. Comprehensive services may require coinsurance; network, exclusions and frequency rules apply.')
     # Aetna annual allowances need benefit-specific context, not the first allowance in the PDF.
@@ -247,9 +260,9 @@ def lookup(params):
                 else:
                     metrics,notes,unavailable=parse_benefits(text,doc['url'])
                     if kind=='evidence':
-                        metrics={k:v for k,v in metrics.items() if k=='dental'}
-                        notes={k:v for k,v in notes.items() if k=='dental'}
-                        unavailable={k:v for k,v in unavailable.items() if k=='dental'}
+                        metrics={k:v for k,v in metrics.items() if k in ('dental','moop')}
+                        notes={k:v for k,v in notes.items() if k in ('dental','moop')}
+                        unavailable={k:v for k,v in unavailable.items() if k in ('dental','moop')}
                     for key in list(metrics):
                         previous=result['benefit_metrics'].get(key)
                         if previous and previous['amount']!=metrics[key]['amount']:

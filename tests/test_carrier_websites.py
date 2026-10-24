@@ -95,6 +95,13 @@ class CarrierWebsiteTests(unittest.TestCase):
         handler.do_GET()
         handler.send_error.assert_called_once_with(404)
 
+    def test_healthspring_s_contract_is_drug_only_even_without_pdp_subtype(self):
+        payload={'MedicarePlans':[{'PlanYear':2027,'ContractID':'S5715','PlanID':'024','SegmentID':'000','ID':'fixture','PlanName':'Assurance Rx (PDP)','PlanSubType':'RX','AnnualPlanPremium':486,'MaximumOutOfPocketCost':0}]}
+        with patch.object(c,'get_json',side_effect=[[{'SessionID':'fixture'}],payload]):
+            record=c.healthspring_plans(LOC)[0]
+        self.assertEqual(record['business'],'Part D')
+        self.assertNotIn('moop',record.get('shopping_metrics',{}))
+
     def test_uhc_exact_location_year_and_zero_premium(self):
         values={'selectedCounty':{'zipCode':'28202','stateCode':'NC','fipsStateCode':'37','fipsCountyCode':'119'},
                 'maPlansCount':1,'pdpPlansCount':0,'pdpPlans':[],

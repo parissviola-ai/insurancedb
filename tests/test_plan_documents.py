@@ -45,6 +45,20 @@ class PlanDocumentTests(unittest.TestCase):
         metrics,_,_=docs.parse_benefits('Hearing aids annual benefit amount (allowance) of $1,250 per ear.','https://example.com/x.pdf')
         self.assertNotIn('dental',metrics)
 
+    def test_medical_maximum_requires_explicit_network_context(self):
+        text=('In-network    Out-of-network\nMonthly plan premium $53\n'
+              'Maximum out-of-pocket amount (does $4,450    $6,700\n'
+              'not include prescription drugs) This is the most you pay each year.')
+        metrics,_,_=docs.parse_benefits(text,'https://example.com/sb.pdf')
+        self.assertEqual(metrics['moop']['amount'],4450)
+        metrics,_,_=docs.parse_benefits(text.replace('In-network    Out-of-network','Out-of-network    In-network'),'https://example.com/sb.pdf')
+        self.assertNotIn('moop',metrics)
+        metrics,_,_=docs.parse_benefits('Maximum out-of-pocket amount (does $8,900\nnot include prescription drugs) Most you pay each year for services received from\nnetwork providers.','https://example.com/hmo.pdf')
+        self.assertEqual(metrics['moop']['amount'],8900)
+        text='Your combined maximum out-of-pocket amount is $6,700. Your in-network maximum out-of-pocket amount (MOOP) is $4,450.'
+        metrics,_,_=docs.parse_benefits(text,'https://example.com/eoc.pdf')
+        self.assertEqual(metrics['moop']['amount'],4450)
+
     def test_formulary_rows_keep_wraps_and_page_numbers(self):
         text=('C1  Fixture drug (Oral Suspension     G   2   QL\n   Reconstituted)\n\f'
               'C1  Another fixture (Oral Tablet)     B   4   PA\n')
