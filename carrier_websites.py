@@ -1,5 +1,6 @@
 """Concurrent, anonymous public carrier shopping. No portal credentials or sessions."""
 import json
+import math
 import re
 import threading
 import subprocess
@@ -101,11 +102,27 @@ def locations(zip_code):
 def plan(carrier, identity, name, loc, source, business='Medicare Advantage', premium=None, special_needs=False):
     if not identity or not name:
         raise ShoppingError('response_changed', 'A plan is missing its official identity or name.')
-    return {'id': carrier + ':' + identity + ':' + str(loc['year']), 'official_id': identity,
+    record = {'id': carrier + ':' + identity + ':' + str(loc['year']), 'official_id': identity,
             'carrier': carrier, 'name': name, **loc, 'business': business,
             'source_url': source, 'checked_at': now(), 'premium': premium,
             'special_needs': special_needs,
             'notice': 'Public shopping listing. Confirm eligibility and complete plan conditions. Provider and medication coverage not checked.'}
+    if carrier == 'HealthSpring':
+        base = f"https://shop.healthspringmedicare.com/{loc['zip']}/{loc['county']}"
+        record['review_sources'] = {'medication': base + f"/prescriptions?planYear={loc['year']}",
+                                    'pharmacy': base + f"/pharmacy?planYear={loc['year']}"}
+    return record
+
+
+def shopping_benefits(record, medical_maximum=None):
+    """Only explicit comparable scalar fields, retaining their shopping source."""
+    metrics = {}
+    if record['business'] == 'Medicare Advantage' and type(medical_maximum) in (int, float) and math.isfinite(medical_maximum) and medical_maximum >= 0:
+        metrics['moop'] = {'amount': medical_maximum, 'period': 'year',
+                           'notes': 'In-network annual medical maximum from public shopping. Part D and excluded services are separate; confirm source conditions.',
+                           'source_url': record['source_url']}
+    record['shopping_metrics'] = metrics
+    return record
 
 
 def devoted_plans(loc):
@@ -161,13 +178,40 @@ def healthspring_plans(loc):
                            bool(p.get('PlanSNPCategories'))))
         if isinstance(p.get('HasDrugCoverage'), bool):
             output[-1]['has_drug_coverage'] = p['HasDrugCoverage']
+        shopping_benefits(output[-1], p.get('MaximumOutOfPocketCost'))
     return output
+
+
+def apply_aetna_prices(plans, rows, products, year):
+    candidates = {}
+    for row in rows:
+        value = row.get('CalculatedPriceData', {})
+        identity = value.get('PlanID')
+        if identity not in products or value.get('productKey') != products[identity]:
+            continue
+        if value.get('ProductAttributeMapping__ContractPBPPlanYear') != f'{identity}-{year}':
+            continue
+        candidates.setdefault(identity, []).append(value)
+    for record in plans:
+        values = candidates.get(record['official_id'], [])
+        if len(values) != 1:
+            record['benefit_notice'] = 'No unique Aetna price record was verified. Missing amounts remain unverified.'
+            continue
+        value = values[0]
+        premium = value.get('PlanPremiumMA' if value.get('productFamily') == 'MA' else 'PlanPremiumNoExtra')
+        if type(premium) in (int, float) and math.isfinite(premium) and premium >= 0:
+            record['premium'] = premium
+            record['premium_notes'] = 'Monthly plan premium before Extra Help adjustments. Part B and other costs still apply.'
+        raw_maximum = value.get('ProductAttributeMapping__IN_MOOP', '')
+        match = re.fullmatch(r'\$([0-9][0-9,]*(?:\.[0-9]{1,2})?)', str(raw_maximum).strip())
+        record['checked_at'] = now()
+        shopping_benefits(record, float(match[1].replace(',', '')) if match else None)
 
 
 def aetna_plans(loc):
     opener = client()
     base = 'https://enrollmedicare.aetna.com'
-    page = '/s/shop?' + urlencode({'PlanYear': loc['year'], 'ZipCode': loc['zip'], 'CountyFIPS': loc['county'], 'step': 'Coverage'})
+    page = '/s/shop?' + urlencode({'PlanYear': loc['year'], 'ZipCode': loc['zip'], 'CountyFIPS': loc['county'], 'step': 'PlanList'})
     html = read(base + page, opener=opener)
     match = next((m for m in re.finditer(r'/s/sfsites/l/(%7B[^"<>]+)', html) if 'fwuid' in m[1]), None)
     if not match:
@@ -185,19 +229,24 @@ def aetna_plans(loc):
               'prospect.providerPlans': None, 'prospect.isMailOrderPharmacy': False,
               'prospect.isStaticDataRequest': True, 'prospect.isDynamicDataRequest': False,
               'prospect.extraHelpForPresDrugs': '', 'prospect.socialSecPerExtraHelp': ''}
-    action = {'id': '1;a', 'descriptor': 'aura://ApexActionController/ACTION$execute', 'callingDescriptor': 'UNKNOWN',
-              'params': {'namespace': '', 'classname': 'GenericInvokeController', 'method': 'invokeApex',
-                         'params': {'sClassName': 'CommunityUserController', 'sMethodName': 'getEligibleProd',
-                                    'input': json.dumps({'PlanYear': str(loc['year']), 'effectiveDate': effective, 'userInputs': inputs}),
-                                    'options': json.dumps({'effectiveDate': effective, 'filters': '', 'includeFilterAttrValues': True})},
-                         'cacheable': False, 'isContinuation': False}}
-    data = get_json(base + '/s/sfsites/aura?r=1&aura.ApexAction.execute=1',
-                    payload={'message': json.dumps({'actions': [action]}), 'aura.context': json.dumps(context),
-                             'aura.pageURI': page, 'aura.token': 'null'}, form=True, opener=opener)
-    result = data['actions'][0]
-    if result.get('state') != 'SUCCESS':
-        raise ShoppingError('unavailable', 'Aetna’s public shopping request failed. No plan availability inferred.')
-    result = json.loads(result['returnValue']['returnValue'])
+    def invoke(method, input_data, options):
+        action = {'id': '1;a', 'descriptor': 'aura://ApexActionController/ACTION$execute', 'callingDescriptor': 'UNKNOWN',
+                  'params': {'namespace': '', 'classname': 'GenericInvokeController', 'method': 'invokeApex',
+                             'params': {'sClassName': 'CommunityUserController', 'sMethodName': method,
+                                        'input': json.dumps(input_data), 'options': json.dumps(options)},
+                             'cacheable': False, 'isContinuation': False}}
+        data = get_json(base + '/s/sfsites/aura?r=1&aura.ApexAction.execute=1',
+                        payload={'message': json.dumps({'actions': [action]}), 'aura.context': json.dumps(context),
+                                 'aura.pageURI': page, 'aura.token': 'null'}, form=True, opener=opener)
+        result = data['actions'][0]
+        if result.get('state') != 'SUCCESS':
+            raise ShoppingError('unavailable', 'Aetna’s public shopping request failed. No plan availability inferred.')
+        value = json.loads(result['returnValue']['returnValue'])
+        if value.get('status') is not True:
+            raise ShoppingError('response_changed', 'Aetna’s public shopping response changed.')
+        return value
+    result = invoke('getEligibleProd', {'PlanYear': str(loc['year']), 'effectiveDate': effective, 'userInputs': inputs},
+                    {'effectiveDate': effective, 'filters': '', 'includeFilterAttrValues': True})
     if result.get('status') is not True or not isinstance(result.get('result', {}).get('IpResult'), list):
         raise ShoppingError('response_changed', 'Aetna’s public plan-list format changed.')
     output = []
@@ -212,6 +261,21 @@ def aetna_plans(loc):
                            'Part D' if p['Family'] == 'PDP' else 'Medicare Advantage',
                            special_needs='SNP' in p.get('SubType', '')))
         output[-1]['has_drug_coverage'] = p['Family'] != 'MA'
+    products = {p['PlanID']: p['Id'] for p in result['result']['IpResult']
+                if p.get('DTCValue') == 'Display' and re.fullmatch(r'[A-Za-z0-9]{15,18}', p.get('Id', ''))}
+    if output:
+        try:
+            if len(products) != len(output):
+                raise ShoppingError('response_changed', 'Aetna product identities could not be linked to prices.')
+            prices = invoke('getProduct2Data', {'effectiveDate': effective, 'userInputs': inputs},
+                            {'effectiveDate': effective, 'evalOptionalCoverageRelationship': False, 'mergeList': True,
+                             'omitEligibility': True, 'rootPricingOnly': True, 'ruleAttributeSetValue': False,
+                             'validateCoverageSelection': False, 'products': list(products.values())})
+            apply_aetna_prices(output, prices['result']['records'], products, loc['year'])
+        except Exception:
+            for record in output:
+                record['benefit_notice'] = 'Aetna pricing details could not be retrieved. Missing amounts remain unverified.'
+
     return output
 
 
@@ -287,6 +351,7 @@ def drx_plans(carrier, loc, result=None):
                            bool(p.get('planSNPCategories')) or 'SNP' in p['planName']))
         if isinstance(p.get('hasDrugCoverage'), bool):
             output[-1]['has_drug_coverage'] = p['hasDrugCoverage']
+        shopping_benefits(output[-1], p.get('maximumOutOfPocketCost'))
     return output
 
 

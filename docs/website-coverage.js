@@ -14,17 +14,17 @@ export function preparedPlan(plan,inventory){
 }
 export function medicationChecks(plan,prepared,items,formularies){
   return items.map(item=>{
-    const base={kind:'Medication',query:item.label || item.name,matches:[],status:'unverified',message:'No matching formulary record. This does not establish exclusion.'};
-    if(plan.has_drug_coverage===false || prepared?.ma_only)return {...base,message:'This source identifies a medical-only plan. Separate prescription coverage is required.'};
-    if(!prepared)return {...base,status:'not_connected',message:'No formulary has been verified for this exact carrier, plan segment, state and year.'};
+    const base={kind:'Medication',query:item.label || item.name,display_name:item.name,matches:[],status:'unverified',message:'No formulary match found. This does not mean the drug is excluded.'};
+    if(plan.has_drug_coverage===false || prepared?.ma_only)return {...base,status:'no_drug_benefit',message:'Medical-only plan. Separate prescription coverage is needed.'};
+    if(!prepared)return {...base,status:'not_connected',message:'Drug checks are not connected for this plan.'};
     const docs=(prepared.documents || []).filter(d=>d.kind==='formulary');
-    if(!docs.length)return {...base,status:'not_connected',message:'No matched formulary is connected for this exact plan.'};
+    if(!docs.length)return {...base,status:'not_connected',message:'Drug checks are not connected for this plan.'};
     for(const doc of docs){
       for(const row of (formularies[doc.url]?.rows || []).filter(r=>item.manual?r.name.toLowerCase().includes(item.name.toLowerCase()):r.name===item.name).slice(0,5)){
-        base.matches.push({name:row.name,detail:`Tier ${row.tier} · PDF page ${row.page}`,restrictions:row.restrictions || 'Confirm tier and all restrictions in the source.',source_url:doc.url+'#page='+row.page,source_date:doc.retrieved_at || formularies[doc.url]?.retrieved_at || '',status:'Formulary candidate — review required'});
+        base.matches.push({name:row.name,detail:`Tier ${row.tier} · PDF page ${row.page}`,restrictions:row.restrictions || 'Confirm tier and all restrictions in the source.',source_url:doc.url+'#page='+row.page,source_date:doc.retrieved_at || formularies[doc.url]?.retrieved_at || '',status:'Formulary candidate — review required',cost:prepared.drug_costs?.tiers?.[row.tier] || null,cost_context:prepared.drug_costs || {}});
       }
     }
-    if(base.matches.length){base.status='review_required';base.message='Source-table candidates only. Confirm the exact strength, form, pharmacy, PA/ST/QL and current formulary. Costs are not estimated.';}
+    if(base.matches.length){base.status='review_required';base.result_type=item.manual?'formulary_candidates':'formulary_listing';base.message=item.manual?'Possible drug matches. Select the exact strength and form.':'Confirm the selected strength and form, then check pharmacy costs and restrictions.';}
     return base;
   });
 }
@@ -33,8 +33,8 @@ async function healthspringFormularies(){
   if(!healthspringPromise)healthspringPromise=fetch('./data/healthspring-formularies.json').then(r=>{if(!r.ok)throw Error('Formulary data unavailable');return r.json();}).catch(e=>{healthspringPromise=null;throw e;});
   return healthspringPromise;
 }
-function checkFor(selection,message='Automated provider checks are not connected for this exact plan. Review the provider identity and office in the official carrier directory.'){
-  return {kind:selection.kind==='facility'?'Facility':'Provider',query:selection.label || selection.name || selection.term,status:'not_connected',message,matches:[]};
+function checkFor(selection,message='Provider checks are not connected for this plan.'){
+  return {kind:selection.kind==='facility'?'Facility':'Provider',query:selection.label || selection.name || selection.term,display_name:selection.name || selection.term,status:'not_connected',message,matches:[]};
 }
 export async function evaluateWebsiteCoverage(plans,context,signal,onUpdate=()=>{}){
   const records=new Map(plans.map(p=>[p.id,{medications:[],providers:context.providers.map(s=>checkFor(s))}]));
@@ -70,7 +70,7 @@ export async function evaluateWebsiteCoverage(plans,context,signal,onUpdate=()=>
       const input=native?selection:{manual:true,kind:selection.kind,term:/^\d{10}$/.test(selection.npi || '')?selection.npi:selection.name || selection.term};
       const term=input.term || input.name || selection.name || selection.term;
       const found=await liveProviders(term,devoted,signal,input);
-      for(const p of devoted){const check=records.get(p.id).providers[index];check.matches=found.matches.get(p.id) || [];check.status=check.matches.length?'review_required':'unverified';check.message=found.truncated?'Directory search was partial. Confirm identity, exact office and current participation.':'Live directory results use the imported exact plan-network mapping. Confirm the provider identity, office and current participation.';onUpdate(p,records.get(p.id));}
+      for(const p of devoted){const check=records.get(p.id).providers[index];check.matches=found.matches.get(p.id) || [];const exactOffice=!selection.manual&&!selection.directory_pdf&&Boolean(selection.locationId);check.status=check.matches.length?(exactOffice?'listed_in_network':'network_candidates'):'unverified';check.message=check.matches.length?(exactOffice?'This office is listed for this plan. Confirm participation before enrollment.':'Select the exact provider and office from the network matches.'):'No network match found. This does not establish exclusion.';check.search_partial=found.truncated;onUpdate(p,records.get(p.id));}
     }catch{for(const p of devoted){const check=records.get(p.id).providers[index];check.status='unavailable';check.message='Live provider directory unavailable. No network participation inferred.';onUpdate(p,records.get(p.id));}}}
     for(const name of ['HealthSpring','Excellus BlueCross BlueShield']){
       const group=plans.filter(p=>p.carrier===name&&p.year===2027&&p.business!=='Part D');if(!group.length || signal?.aborted)continue;
@@ -86,7 +86,7 @@ export async function evaluateWebsiteCoverage(plans,context,signal,onUpdate=()=>
           for(const option of options){const found=pdfMatches(option,exact);check.matches.push(...(found.get(p.id) || []));}
           check.matches=check.matches.slice(0,5);
           if(!check.matches.length){check.status='unverified';check.message='No applicable PDF candidate was verified for this exact plan. Missing listings do not establish exclusion; use the official directory.';}
-          if(check.matches.length){check.status='review_required';check.message='Dated PDF candidates for this exact plan. Confirm identity, office and current participation; these are not live network checks.';}
+          if(check.matches.length){check.status=selection.directory_pdf?'dated_directory_listing':'directory_candidates';check.message='Dated directory listing. Confirm the provider, office and current participation.';}
           onUpdate(p,records.get(p.id));
         }
       }catch{for(const p of group){records.get(p.id).providers[index].message='PDF directory search unavailable. Participation remains unverified.';onUpdate(p,records.get(p.id));}}

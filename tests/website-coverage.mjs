@@ -16,7 +16,7 @@ assert.equal(checks[0].status,'review_required');assert(checks[0].matches.length
 assert(checks[0].matches.every(m=>m.source_url.includes('#page=')));
 assert.equal(medicationChecks(publicPlan,null,[item],formularies)[0].status,'not_connected');
 assert.equal(medicationChecks({...publicPlan,has_drug_coverage:false},null,[item],formularies)[0].matches.length,0);
-assert.match(medicationChecks(publicPlan,prepared,[{name:'fixture-no-such-drug',manual:true}],formularies)[0].message,/does not establish exclusion/);
+assert.match(medicationChecks(publicPlan,prepared,[{name:'fixture-no-such-drug',manual:true}],formularies)[0].message,/does not mean the drug is excluded/);
 const unknown={...publicPlan,id:'unconnected',carrier:'Aetna'};
 let requests=0;const original=globalThis.fetch;globalThis.fetch=async()=>{requests++;throw Error('No unexpected remote requests');};
 const context={medications:[item],providers:[{manual:true,term:'Fixture doctor',kind:'provider'}],loadData:async()=>[inventory,{},formularies]};
@@ -38,3 +38,26 @@ assert.equal(hsResult.get(hs.id).medications[0].status,'review_required');
 assert(hsResult.get(hs.id).medications[0].matches[0].source_date);
 globalThis.fetch=original;
 console.log('HealthSpring all-state exact-segment formulary reuse passed.');
+// An exact selected office can have a clear positive status; broad name/NPI
+// searches retain a candidate status even when network listings were found.
+const role={id:'fixture-role',active:true,period:{start:'2027-01-01',end:'2027-12-31'},
+  extension:[{url:'https://example.com/network-reference',valueReference:{reference:'Organization/fixture-network'}}],location:[{reference:'Location/fixture-location'}]};
+const person={id:'fixture-person',resourceType:'Practitioner',name:[{text:'Fixture Provider'}]};
+globalThis.fetch=async url=>{
+ const u=new URL(url);let response;
+ if(u.pathname.endsWith('/Practitioner/fixture-person'))response=person;
+ else if(u.pathname.endsWith('/Practitioner'))response={resourceType:'Bundle',entry:[{resource:person}]};
+ else if(u.pathname.endsWith('/PractitionerRole'))response={resourceType:'Bundle',entry:[{resource:role}]};
+ else if(u.pathname.endsWith('/Location/fixture-location'))response={address:{state:'NC',text:'Fixture exact office'}};
+ else throw Error('Unexpected fixture request');
+ return {ok:true,json:async()=>response};
+};
+const providerSource={...prepared,network:[{reference:'Organization/fixture-network'}]};
+const selected={personId:'fixture-person',locationId:'fixture-location',name:'Fixture Provider',office:'Fixture exact office',kind:'provider',manual:false};
+const providerContext={medications:[],providers:[selected],loadData:async()=>[{plans:[providerSource]},{},{}]};
+const positive=await evaluateWebsiteCoverage([publicPlan],providerContext,new AbortController().signal);
+assert.equal(positive.get(publicPlan.id).providers[0].status,'listed_in_network');
+const broad=await evaluateWebsiteCoverage([publicPlan],{...providerContext,providers:[{manual:true,kind:'provider',term:'Fixture Provider'}]},new AbortController().signal);
+assert.equal(broad.get(publicPlan.id).providers[0].status,'network_candidates');
+globalThis.fetch=original;
+console.log('Exact live office is listed in network; broad provider matches remain candidates.');

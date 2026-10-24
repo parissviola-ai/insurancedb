@@ -350,3 +350,52 @@ and the GitHub Pages copy are separate; use the local URL for website searches.
 starting a server. `--no-browser` suppresses browser opening. The local Content
 Security Policy explicitly allows only the existing external provider API origins
 needed by the dashboard's connected checks.
+
+
+### Full comparison features for Search all
+
+The combined website search now shows the same benefit columns and uses the same
+priority scoring and XLSX writer as the regular search. It includes local carrier
+and product filters, the shared special-needs toggle, expandable plan details,
+source-linked benefit amounts and a five-sheet Excel export (intake/priorities,
+comparison, coverage review, benefit sources and all carrier statuses). Changing
+priorities or display filters does not repeat upstream searches. Coverage results
+update in place and exports include the state available at download time; unfinished
+checks remain explicitly pending.
+
+Saved benefits attach only to exact carrier/CMS segment/state/year matches. A live
+premium takes precedence over an imported premium, while other imported document
+amounts retain their own retrieval dates. Public HealthSpring and Connecture responses
+can additionally supply explicit in-network annual medical maximums; negative,
+missing, nonnumeric and nonfinite values are not amounts. Missing dental, OTC or
+other benefits are not filled by inference. Rankings use only comparable medical
+plans with every selected amount: special-needs plans are excluded from scoring,
+medical-only plans are unranked when medications were requested, and Part D plans
+are not ranked against Medicare Advantage plans.
+
+Aetna links now use `step=PlanList`, with ZIP/FIPS/year from the search. Its public
+pricing action adds premiums before Extra Help adjustments and explicit in-network
+medical maximums only when product identity and contract/PBP/year match the returned
+plan. Ambiguous or failed pricing preserves the plan list with an explicit benefit
+notice. October 24 validation for ZIP 28262 / Mecklenburg / 2027 returned nine plans
+with verified premiums; Eagle H5521-241 returned $0/month and a $7,150 medical maximum.
+No county or year is hardcoded to that test case.
+
+Coverage summaries distinguish "Listed in plan network" (selected exact live office),
+"Network matches — choose office" (broad search), dated PDF listings/candidates,
+formulary matches, "No prescription coverage" (medical-only source) and
+"Not checked — connection needed". Evidence and longer restrictions remain under
+"Sources and conditions"; they are also retained in Excel. Missing connections do
+not imply that a medication or provider is excluded.
+
+HealthSpring details link to its location-specific `/prescriptions` and `/pharmacy`
+steps. Both public pages were opened for ZIP 28613 / FIPS 37035. Selections made on
+those external pages are not imported into this dashboard; exact pharmacy quotes
+are not claimed here. Prices still require the exact product, dose, quantity,
+days' supply, pharmacy and coverage-stage assumptions.
+
+Validation: 45 Python tests; all Node checks including
+`tests/website-comparison.mjs`; browser checks for ranking/filter changes without
+another website request, plan details, special-needs visibility, and the five-sheet
+Excel download. The Mac copy must be updated from GitHub and restarted to pick up
+these features; an already extracted ZIP does not update itself.

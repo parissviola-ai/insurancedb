@@ -124,3 +124,31 @@ class CarrierWebsiteTests(unittest.TestCase):
         self.assertIsNone(result['checked_at'])
         self.assertIsNotNone(result['source_checked_at'])
         self.assertEqual(result['plans'],[])
+
+    def test_shopping_benefit_fields_and_healthspring_review_links(self):
+        record=c.plan('HealthSpring','H1234-001-000','Fixture',LOC,'https://shop.healthspringmedicare.com/')
+        self.assertIn('/28202/37119/prescriptions?planYear=2027',record['review_sources']['medication'])
+        self.assertIn('/pharmacy?planYear=2027',record['review_sources']['pharmacy'])
+        self.assertEqual(c.shopping_benefits(record,0)['shopping_metrics']['moop']['amount'],0)
+        for value in (None,False,-1,float('inf')):
+            self.assertEqual(c.shopping_benefits(dict(record),value)['shopping_metrics'],{})
+        pdp={**record,'business':'Part D'}
+        self.assertEqual(c.shopping_benefits(pdp,500)['shopping_metrics'],{})
+
+    def test_aetna_prices_require_exact_product_and_year(self):
+        def record(identity):return c.plan('Aetna',identity,'Fixture',LOC,c.AETNA_SOURCE)
+        good={'CalculatedPriceData':{'PlanID':'H1234-001','productKey':'exact-product',
+              'ProductAttributeMapping__ContractPBPPlanYear':'H1234-001-2027','productFamily':'MA',
+              'PlanPremiumMA':0,'ProductAttributeMapping__IN_MOOP':'$7,150'}}
+        plan=record('H1234-001')
+        c.apply_aetna_prices([plan],[good],{'H1234-001':'exact-product'},2027)
+        self.assertEqual(plan['premium'],0)
+        self.assertEqual(plan['shopping_metrics']['moop']['amount'],7150)
+        for change in [{'productKey':'other-product'}, {'ProductAttributeMapping__ContractPBPPlanYear':'H1234-001-2026'}]:
+            with self.subTest(change=change):
+                plan=record('H1234-001')
+                c.apply_aetna_prices([plan],[{'CalculatedPriceData':{**good['CalculatedPriceData'],**change}}],{'H1234-001':'exact-product'},2027)
+                self.assertIsNone(plan['premium'])
+        plan=record('H1234-001')
+        c.apply_aetna_prices([plan],[good,good],{'H1234-001':'exact-product'},2027)
+        self.assertIsNone(plan['premium'])

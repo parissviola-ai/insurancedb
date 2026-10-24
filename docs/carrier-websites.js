@@ -1,3 +1,4 @@
+import {comparisonPlans,websiteComparison} from './website-comparison.js';
 import {readSearchContext} from './search-context.js';
 import {evaluateWebsiteCoverage} from './website-coverage.js';
 // Public plan search sends location only. Medication matches run locally;
@@ -5,16 +6,16 @@ import {evaluateWebsiteCoverage} from './website-coverage.js';
 const form=document.querySelector('#search');
 const button=document.querySelector('#search-carrier-websites');
 const output=document.querySelector('#website-results');
-let controller;let selectedWebsiteCounty='';let selectedWebsiteZip='';
+let controller;let comparison;let selectedWebsiteCounty='';let selectedWebsiteZip='';
 function node(tag,text){const n=document.createElement(tag);if(text!==undefined)n.textContent=text;return n;}
-function reset(){controller?.abort();button.disabled=false;output.hidden=true;output.replaceChildren();output.setAttribute('aria-busy','false');}
+function reset(){controller?.abort();comparison?.destroy();comparison=null;button.disabled=false;output.hidden=true;output.replaceChildren();output.setAttribute('aria-busy','false');}
 for(const name of ['zip','county','state','year','business'])form.elements[name].addEventListener('change',reset);
 form.elements.zip.addEventListener('input',reset);
 document.addEventListener('plan-search-selections-changed',reset);
 for(const id of ['medication-search','provider-search'])document.querySelector('#'+id).addEventListener('input',reset);
 function link(parent,url,label){try{const u=new URL(url);if(u.protocol!=='https:'||u.username||u.password)return;const a=node('a',label);a.href=u.href;a.target='_blank';a.rel='noopener noreferrer';parent.append(a);}catch{}}
 async function search(chosenCounty=''){
-  controller?.abort();controller=new AbortController();const signal=controller.signal;
+  controller?.abort();comparison?.destroy();comparison=null;controller=new AbortController();const signal=controller.signal;
   output.hidden=false;output.replaceChildren(node('h2','Plans from public carrier websites'));
   const params=new URLSearchParams();
   for(const name of ['zip','year'])params.set(name,form.elements[name].value.trim());
@@ -44,21 +45,12 @@ async function search(chosenCounty=''){
     }
     if(data.location)output.append(node('p',`${data.location.zip} · ${data.location.county_name} County, ${data.location.state} · ${data.location.year}`));
     output.append(node('p',data.notice));
-    const coverageCells=new Map();
-    if(data.plans.length){
-      output.append(node('h3',`${data.plans.length} plans returned`));
-      const wrap=node('div');wrap.className='comparison-scroll';const table=node('table');const head=node('tr');
-      for(const text of ['Carrier','Plan','Plan ID','Product','Monthly premium','Source / checked','Medications','Providers / facilities'])head.append(node('th',text));
-      const thead=node('thead');thead.append(head);table.append(thead);const body=node('tbody');
-      for(const p of data.plans){const tr=node('tr');
-        for(const value of [p.carrier,p.name+(p.special_needs?' — special eligibility required':''),p.official_id,p.business,p.premium===null?'Unverified':new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(p.premium)])tr.append(node('td',value));
-        const source=node('td');link(source,p.source_url,'Official shopping source');source.append(node('p',new Date(p.checked_at).toLocaleString()));tr.append(source);
-        const drugs=node('td',context.medications.length?'Checking matched formularies…':'Not requested');
-        const providers=node('td',context.providers.length?'Checking connected directories…':'Not requested');
-        tr.append(drugs,providers);coverageCells.set(p.id,{drugs,providers});body.append(tr);
-      }
-      table.append(body);wrap.append(table);output.append(wrap);
-    }
+    let inventory={plans:[]};
+    try{[inventory]=await context.loadData();}catch{output.append(node('p','Saved benefit documents could not be loaded. Shopping results remain available; missing benefits are unverified.'));}
+    if(signal.aborted)return;
+    const plans=comparisonPlans(data.plans,inventory);
+    const comparisonContainer=node('section');output.append(comparisonContainer);
+    comparison=websiteComparison(comparisonContainer,data,plans,context,form);
     output.append(node('h3','Carrier search status'));
     const statuses=node('ul');
     for(const c of data.carriers){const item=node('li');item.append(node('strong',`${c.carrier}: ${c.status.replaceAll('_',' ')}`),node('p',c.message));
@@ -68,20 +60,10 @@ async function search(chosenCounty=''){
     }
     output.append(statuses);
     if(context.medications.length || context.providers.length){
-      output.append(node('p','Medication results are formulary candidates. Provider results may be live listings or dated PDF candidates. Missing or disconnected sources remain unverified. Exact prescription, pharmacy, provider identity and office require confirmation.'));
-      await evaluateWebsiteCoverage(data.plans,context,signal,(plan,checks)=>{if(signal.aborted)return;const cells=coverageCells.get(plan.id);if(!cells)return;renderChecks(cells.drugs,checks.medications,plan,'medication');renderChecks(cells.providers,checks.providers,plan,'provider');});
+      output.append(node('p','Open plan details for medication, provider and source information. “Not checked” does not mean “not covered.”'));
+      await evaluateWebsiteCoverage(data.plans,context,signal,(plan,checks)=>{if(!signal.aborted)comparison?.updateCoverage(plan.id,checks);});
     }
   }catch(error){if(!signal.aborted)output.replaceChildren(node('h2','Carrier website search unavailable'),node('p',error.message||'No plan availability determined. Please retry.'));}
   finally{if(!signal.aborted){button.disabled=false;output.setAttribute('aria-busy','false');}}
 }
 button.addEventListener('click',()=>search());
-
-function renderChecks(cell,checks,plan,kind){
-  cell.replaceChildren();if(!checks.length){cell.append(node('span','Not requested'));return;}
-  for(const check of checks){
-    const section=node('details');section.append(node('summary',`${check.query}: ${check.status.replaceAll('_',' ')}`),node('p',check.message));
-    for(const match of check.matches){section.append(node('p',match.name+(match.detail?' · '+match.detail:'')));if(match.restrictions)section.append(node('p',match.restrictions));if(match.source_date)section.append(node('p','Source retrieved: '+match.source_date));link(section,match.source_url,'Review source');}
-    if(!check.matches.length)link(section,plan.review_sources?.[kind] || plan.source_url,'Review on carrier site');
-    cell.append(section);
-  }
-}
